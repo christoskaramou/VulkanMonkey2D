@@ -1,5 +1,5 @@
 # VulkanMonkey
-play around with vulkan and box2D
+Play around with vulkan and box2D
 
 Dependencies: glm, glfw, vulkan, stb_image, box2d (already imported, just link)
 
