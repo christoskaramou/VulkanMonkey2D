@@ -72,7 +72,7 @@ namespace vm {
 		objects.back().body->SetType(b2BodyType::b2_kinematicBody);
 
 		float depth = 0.00001f;
-		for (int i = 0; i < 500 * SCALE; i++) {
+		for (int i = 0; i < 100 * SCALE; i++) {
 			depth += 0.00001f;
 			rect1 = { b2Vec2(x(gen), y(gen)), b2Vec2(w(gen), h(gen)) };
 			rect1.size.y = rect1.size.x;
@@ -84,16 +84,49 @@ namespace vm {
 			if (i % 2 == 0)
 				objects.back().body->SetGravityScale(-1.f);
 		}
-
+		for (int i = 0; i < 100 * SCALE; i++) {
+			depth += 0.00001f;
+			rect1 = { b2Vec2(x(gen), y(gen)), b2Vec2(w(gen), h(gen)) };
+			rect1.size.y = rect1.size.x;
+			objects.push_back(Entity(std::make_shared<Sprite>(rect1, "textures/circle.png")));
+			objects.back().setDepth(depth);
+			objects.back().createBody2D(rect1.pos.x, rect1.pos.y);
+			objects.back().addCircleShape(rect1.size.x);
+			//objects.back().addBoxShape(rect1.size.x, rect1.size.y);
+			if (i % 2 == 0)
+				objects.back().body->SetGravityScale(-1.f);
+		}		
+		for (int i = 0; i < 100 * SCALE; i++) {
+			depth += 0.00001f;
+			rect1 = { b2Vec2(x(gen), y(gen)), b2Vec2(w(gen), h(gen)) };
+			rect1.size.y = rect1.size.x;
+			objects.push_back(Entity(std::make_shared<Sprite>(rect1, "textures/circle-maze.png")));
+			objects.back().setDepth(depth);
+			objects.back().createBody2D(rect1.pos.x, rect1.pos.y);
+			objects.back().addCircleShape(rect1.size.x);
+			//objects.back().addBoxShape(rect1.size.x, rect1.size.y);
+			if (i % 2 == 0)
+				objects.back().body->SetGravityScale(-1.f);
+		}
+		for (int i = 0; i < 100 * SCALE; i++) {
+			depth += 0.00001f;
+			rect1 = { b2Vec2(x(gen), y(gen)), b2Vec2(w(gen), h(gen)) };
+			objects.push_back(Entity(std::make_shared<Sprite>(rect1, "textures/default.jpg")));
+			objects.back().setDepth(depth);
+			objects.back().createBody2D(rect1.pos.x, rect1.pos.y);
+			//objects.back().addCircleShape(rect1.size.x);
+			objects.back().addBoxShape(rect1.size.x, rect1.size.y);
+			if (i % 2 == 0)
+				objects.back().body->SetGravityScale(-1.f);
+		}
 		// player
-		Rect rect{ b2Vec2(0, 0), b2Vec2(20, 20) };
+		Rect rect{ b2Vec2(0, 0), b2Vec2(15, 20) };
 		player.setSprite(std::make_shared<Sprite>(rect, "textures/stickman.png"));
 		player.setDepth(0.12f); // front
-		player.createBody2D(rect.pos.x, rect.pos.y); 
-		player.addCircleShape(rect.size.x);
-		//player.addBoxShape(rect.size.x, rect.size.y);
+		player.createBody2D(rect.pos.x, rect.pos.y);
+		player.addBoxShape(rect.size.x, rect.size.y);
 		player.body->SetType(b2BodyType::b2_dynamicBody);
-		//player.body->SetFixedRotation(true);
+		player.body->SetFixedRotation(true);
 	}
 
 	void Game1::init()
@@ -113,13 +146,12 @@ namespace vm {
 
 		t.Set(b2Vec2(P2M*player.getSprite().getRect().pos.x, P2M*player.getSprite().getRect().pos.y), player.getAngle());
 		player.setTransform(t);
-		//camera->attachTo(player.getTranslationMat());
+		camera->attachTo(player.getTranslationMat());
 
 		for (auto &e : objects) {
 			t.Set(b2Vec2(P2M*e.getSprite().getRect().pos.x, P2M*e.getSprite().getRect().pos.y), e.getAngle());
 			e.setTransform(t);
 		}
-		//ResourceManager::getInstance().getRectsFromImage("textures/circle-maze.png", false);
 	}
 
 	void Game1::update(double delta)

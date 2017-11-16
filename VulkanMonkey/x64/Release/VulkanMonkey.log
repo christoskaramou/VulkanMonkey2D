@@ -1,16 +1,7 @@
-﻿  Entity.cpp
-  Game.cpp
-  Game1.cpp
-  main.cpp
-  Rect.cpp
-  Renderer.cpp
-  ResourceManager.cpp
-  Sprite.cpp
-  Vulkan_.cpp
-  Window.cpp
+﻿  Game1.cpp
   Generating code
-  2863 of 2893 functions (99.0%) were compiled, the rest were copied from previous compilation.
-    15 functions were new in current compilation
-    0 functions had inline decision re-evaluated but remain unchanged
+  95 of 2904 functions ( 3.3%) were compiled, the rest were copied from previous compilation.
+    4 functions were new in current compilation
+    59 functions had inline decision re-evaluated but remain unchanged
   Finished generating code
   VulkanMonkey.vcxproj -> C:\Users\nikos\Source\Repos\VulkanMonkey\x64\Release\VulkanMonkey.exe
