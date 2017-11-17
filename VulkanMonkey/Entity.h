@@ -1,20 +1,20 @@
 #pragma once
 #include "Sprite.h"
 #include "Box2D\Box2D.h"
-#define M2P 32.0f
+#define M2P 60.0f
 #define P2M 1/M2P
 
 namespace vm {
 	class Entity {
 	public:
-		static std::vector<std::shared_ptr<Entity>>		entities;
+		static std::vector<Entity*>		drawList;
+		static std::vector<Entity>		entities;
 
 		Entity();
-		Entity(std::shared_ptr<Sprite> sp);
 		~Entity();
 
 	private:
-		std::shared_ptr<Sprite>		sprite;
+		Sprite*						sprite;
 		glm::mat4					model;
 		float						angle;
 		float						depth;
@@ -31,11 +31,13 @@ namespace vm {
 		void addCircleShape(float radius, float localX = 0.f, float localY = 0.f);
 
 		bool hasBody();
+		bool hasSprite();
 		void setDepth(const float depth);
+		float getDepth();
 		void setTransform(const b2Transform& transform);
 		float getAngle();
 
-		void setSprite(std::shared_ptr<Sprite> sp);
+		void setSprite(Sprite* sp);
 		Sprite& getSprite();
 		glm::mat4& getTranslationMat();
 	};

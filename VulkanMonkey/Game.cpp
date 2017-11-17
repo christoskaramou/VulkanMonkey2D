@@ -6,6 +6,10 @@
 namespace vm {
 	Game::Game()
 	{
+		timeFactor = 1.0;
+		gameState = GameState::Running;
+		limitedFps = 0;
+		limitedSeconds = 0;
 	}
 
 	Game::~Game()
@@ -36,10 +40,11 @@ namespace vm {
 
 			// update and draw
 			if (gameState == GameState::Paused)	{
+				update(0);
 				draw();
 			}
 			else if (gameState == GameState::Running) {
-				update(delta);
+				update(delta * timeFactor);
 				draw();
 			}
 			else if (gameState == GameState::Exit) {
@@ -74,9 +79,6 @@ namespace vm {
 
 	void Game::init()
 	{
-		gameState = GameState::Running;
-		limitedFps = 0;
-		limitedSeconds = 0;
 	}
 
 	void Game::update(double delta)
@@ -85,7 +87,7 @@ namespace vm {
 
 	void vm::Game::draw()
 	{
-		Sprite::drawList.clear();
+		Entity::drawList.clear();
 	}
 
 	void vm::Game::checkInput(double delta)
@@ -125,6 +127,10 @@ namespace vm {
 	double Game::getDelta()
 	{
 		return delta;
+	}
+	void Game::bulletTime(double timeFactor)
+	{
+		this->timeFactor = timeFactor;
 	}
 	void Game::setMaxFPS(unsigned int fps)
 	{

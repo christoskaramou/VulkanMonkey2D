@@ -21,7 +21,6 @@ namespace vm {
 		friend class Renderer;
 	public:
 		static std::vector<Sprite*>			sprites;
-		static std::vector<unsigned int>	drawList;
 
 		BufferInfo						vBuffInfo;
 		BufferInfo						iBuffInfo;

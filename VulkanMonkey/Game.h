@@ -28,6 +28,7 @@ namespace vm {
 		virtual void draw();
 		float calculateFPS();
 		double getDelta();
+		void bulletTime(double timeFactor);
 
 	protected:
 		GameState gameState;
@@ -35,6 +36,7 @@ namespace vm {
 
 	private:
 		double delta;
+		double timeFactor;
 		unsigned int limitedFps;
 		double limitedSeconds;
 	};

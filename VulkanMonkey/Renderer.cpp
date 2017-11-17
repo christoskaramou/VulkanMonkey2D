@@ -36,7 +36,6 @@ namespace vm {
 		createDescriptorSetLayout();
 		createGraphicsPipeline();
 
-		
 	}
 	Renderer::~Renderer()
 	{
@@ -337,7 +336,7 @@ namespace vm {
 		createDepthResources();		// match the new color attachment resolution
 		createFrameBuffers();		// swapchain image update
 		createCommandBuffers();		// swapchain image update
-		recordCommandBuffers();
+		recordSimultaneousUseCommandBuffers();
 	}
 	std::string Renderer::getGpuName()
 	{
@@ -350,8 +349,8 @@ namespace vm {
 			.setSamples(vk::SampleCountFlagBits::e1)
 			.setLoadOp(vk::AttachmentLoadOp::eClear)
 			.setStoreOp(vk::AttachmentStoreOp::eStore)
-			.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
-			.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
+			//.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
+			//.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
 			.setInitialLayout(vk::ImageLayout::eUndefined)
 			.setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
 
@@ -365,7 +364,7 @@ namespace vm {
 			.setLoadOp(vk::AttachmentLoadOp::eClear)
 			.setStoreOp(vk::AttachmentStoreOp::eDontCare)
 			.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
-			.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
+			.setStencilStoreOp(vk::AttachmentStoreOp::eStore)
 			.setInitialLayout(vk::ImageLayout::eUndefined)
 			.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
 
@@ -379,13 +378,13 @@ namespace vm {
 			.setPColorAttachments(&car)
 			.setPDepthStencilAttachment(&depthAttachmentRef);
 
-		auto const dependency = vk::SubpassDependency()
-			.setSrcSubpass(VK_SUBPASS_EXTERNAL)
-			.setDstSubpass(0)
-			.setSrcStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput)
-			.setSrcAccessMask(vk::AccessFlags())
-			.setDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput)
-			.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite);
+		//auto const dependency = vk::SubpassDependency()
+		//	.setSrcSubpass(VK_SUBPASS_EXTERNAL)
+		//	.setDstSubpass(0)
+		//	.setSrcStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput)
+		//	.setSrcAccessMask(vk::AccessFlags())
+		//	.setDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput)
+		//	.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite);
 
 		std::array<vk::AttachmentDescription, 2> attachments = { cad, depthAttachment };
 
@@ -393,9 +392,9 @@ namespace vm {
 			.setAttachmentCount(static_cast<uint32_t>(attachments.size()))
 			.setPAttachments(attachments.data())
 			.setSubpassCount(1)
-			.setPSubpasses(&sd)
-			.setDependencyCount(1)
-			.setPDependencies(&dependency);
+			.setPSubpasses(&sd);
+			//.setDependencyCount(1)
+			//.setPDependencies(&dependency);
 
 		errCheck(device.createRenderPass(&rpci, nullptr, &renderPass));
 	}
@@ -548,18 +547,23 @@ namespace vm {
 
 		auto const cpci = vk::CommandPoolCreateInfo()
 			.setQueueFamilyIndex(qi.graphicsFamilyId)
-			.setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer);
+			.setFlags(vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer);
 		errCheck(device.createCommandPool(&cpci, nullptr, &commandPool));
 	}
 	void Renderer::createCommandBuffers()
 	{
 		commandBuffers.resize(swapchainFrameBuffers.size());
-
 		auto const cbai = vk::CommandBufferAllocateInfo()
 			.setCommandPool(commandPool)
 			.setLevel(vk::CommandBufferLevel::ePrimary)
 			.setCommandBufferCount((uint32_t)(commandBuffers.size()));
 		errCheck(device.allocateCommandBuffers(&cbai, commandBuffers.data()));
+
+		auto const dcbai = vk::CommandBufferAllocateInfo()
+			.setCommandPool(commandPool)
+			.setLevel(vk::CommandBufferLevel::ePrimary)
+			.setCommandBufferCount(1);
+		errCheck(device.allocateCommandBuffers(&dcbai, &dynamicCmdBuffer));
 	}
 	void Renderer::destroyCommandPool()
 	{
@@ -744,7 +748,7 @@ namespace vm {
 		auto depthStencil = vk::PipelineDepthStencilStateCreateInfo()
 			.setDepthTestEnable(VK_TRUE)
 			.setDepthWriteEnable(VK_TRUE)
-			.setDepthCompareOp(vk::CompareOp::eLess)
+			.setDepthCompareOp(vk::CompareOp::eLessOrEqual)
 			.setDepthBoundsTestEnable(VK_FALSE) // for the optional depth bound test
 			.setMinDepthBounds(0.0f) // for the optional depth bound test
 			.setMaxDepthBounds(1.0f) // for the optional depth bound test
@@ -1018,11 +1022,11 @@ namespace vm {
 	{
 		return capabilities.currentExtent;
 	}
-	void Renderer::summit()
+	void Renderer::summit(bool useDynamicCmdBuffer)
 	{
 
 		//presentQueue.waitIdle();
-		//recordCommandBuffers();
+		//recordSimultaneousUseCommandBuffers();
 		// 1. Acquiring an image from the swapchain
 		//(this image is attached in the framebuffer)
 		uint32_t imageIndex;
@@ -1036,6 +1040,15 @@ namespace vm {
 				exit(-1);
 			}
 		}
+		vk::CommandBuffer* cmdBuffer;
+		if (useDynamicCmdBuffer) {
+			recordOneTimeSubmitCommandBuffers(imageIndex);
+			cmdBuffer = &dynamicCmdBuffer;
+		}
+		else {
+			cmdBuffer = &commandBuffers[imageIndex];
+		}
+
 		// 2. Submitting the command buffer to the graphics queue
 		vk::Semaphore waitSemaphores[] = { semaphore_Image_Available };
 		vk::Semaphore signalSemaphores[] = { semaphore_Render_Finished };
@@ -1045,18 +1058,17 @@ namespace vm {
 			.setPWaitSemaphores(waitSemaphores)
 			.setPWaitDstStageMask(waitStages)
 			.setCommandBufferCount(1)
-			.setPCommandBuffers(&commandBuffers[imageIndex])
+			.setPCommandBuffers(cmdBuffer)
 			.setSignalSemaphoreCount(1)
 			.setPSignalSemaphores(signalSemaphores);
 		errCheck(graphicsQueue.submit(1, &si, nullptr));
 
 		// 3. Return the image to the swapchain for presentation
-		vk::SwapchainKHR swapchains[] = { swapchain };
 		auto const pi = vk::PresentInfoKHR()
 			.setWaitSemaphoreCount(1)
 			.setPWaitSemaphores(signalSemaphores)
 			.setSwapchainCount(1)
-			.setPSwapchains(swapchains)
+			.setPSwapchains(&swapchain)
 			.setPImageIndices(&imageIndex)
 			.setPResults(nullptr); //optional
 		res = presentQueue.presentKHR(&pi);
@@ -1079,10 +1091,11 @@ namespace vm {
 		createDescriptorPool();
 		createDescriptorSet();
 
-		recordCommandBuffers();
+		recordSimultaneousUseCommandBuffers();
 		createSemaphores();
 	}
-	void Renderer::recordCommandBuffers()
+	// TODO needs reword, Entity::entities is not working atm
+	void Renderer::recordSimultaneousUseCommandBuffers()
 	{
 		//	Begin Command Buffer
 		//	|	Begin Render Pass
@@ -1112,7 +1125,11 @@ namespace vm {
 				commandBuffers[i].beginRenderPass(&renderPassInfo, vk::SubpassContents::eInline);
 
 				commandBuffers[i].bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
-				if (Sprite::sprites.size() > 0) {
+
+				// sort the drawList from the lowest depth value, for alpha blending and depth tests purpose
+				std::sort(Entity::entities.begin(), Entity::entities.end(), [](Entity a, Entity b) -> bool { return a.getDepth() < b.getDepth(); });
+
+				if (Entity::entities.size() > 0) {
 					// ----------DRAW SPRITES----------
 					//binding the vertex buffer
 					const vk::DeviceSize offsets[] = { 0 };
@@ -1121,11 +1138,14 @@ namespace vm {
 					commandBuffers[i].bindIndexBuffer(ResourceManager::getInstance().spritesIndexBuffer, 0, vk::IndexType::eUint32);
 
 					int32_t vOffset = 0;
-					for (auto &sprite : Sprite::sprites) {
+					for (auto &entity : Entity::entities) {
+
+						if (!entity.hasSprite())
+							continue;
 
 						// bind descriptor sets
-						const vk::DescriptorSet dSets[] = { sprite->descriptorSet, mainCamera.getDescriptorSet() };
-						const uint32_t dOffsets[] = { static_cast<uint32_t>(sprite->uBuffInfo.offset) };
+						const vk::DescriptorSet dSets[] = { entity.getSprite().descriptorSet, mainCamera.getDescriptorSet() };
+						const uint32_t dOffsets[] = { static_cast<uint32_t>(entity.getSprite().uBuffInfo.offset) };
 						commandBuffers[i].bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
 							pipelineLayout, 0, 2, dSets, 1, dOffsets);
 
@@ -1135,33 +1155,71 @@ namespace vm {
 					}
 					// --------------------------------
 				}
-				//if (Sprite::sprites.size() > 0) {
-				//	// ----------DRAW SPRITES----------
-				//	//binding the vertex buffer
-				//	const vk::DeviceSize offsets[] = { 0 };
-				//	commandBuffers[i].bindVertexBuffers(0, 1, &ResourceManager::getInstance().spritesVertexBuffer, offsets);
-				//	//binding the index buffer
-				//	commandBuffers[i].bindIndexBuffer(ResourceManager::getInstance().spritesIndexBuffer, 0, vk::IndexType::eUint32);
-
-				//	int32_t vOffset = (Sprite::sprites.size() - 1) * 4;
-				//	for (auto rit = Sprite::sprites.rbegin(); rit != Sprite::sprites.rend(); ++rit) {
-
-				//		// bind descriptor sets
-				//		const vk::DescriptorSet dSets[] = { (*rit)->descriptorSet, mainCamera.getDescriptorSet() };
-				//		const uint32_t dOffsets[] = { static_cast<uint32_t>((*rit)->uBuffInfo.offset) };
-				//		commandBuffers[i].bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
-				//			pipelineLayout, 0, 2, dSets, 1, dOffsets);
-
-				//		//drawing indexed
-				//		commandBuffers[i].drawIndexed(6, 1, 0, vOffset, 0); // 6 indices for every 4 vertices in vBuffer (1 rect)
-				//		vOffset -= 4;
-				//	}
-				//	// --------------------------------
-				//}
-
 				commandBuffers[i].endRenderPass();
 			}
 			commandBuffers[i].end();
 		}
+	}
+	void Renderer::recordOneTimeSubmitCommandBuffers(uint32_t imageIndex)
+	{
+		//	Begin Command Buffer
+		//	|	Begin Render Pass
+		//	|	|	Bind GraphicsPipeline
+		//	|	|	|	Draw
+		//	|	End Render Pass
+		//	End Command Buffer
+
+		auto const dbeginInfo = vk::CommandBufferBeginInfo()
+			.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit)
+			.setPInheritanceInfo(nullptr);
+		errCheck(dynamicCmdBuffer.begin(&dbeginInfo));
+		// Render Pass
+		{
+			std::array<vk::ClearValue, 2> clearValues = {};
+			clearValues[0].setColor(vk::ClearColorValue().setFloat32({ 0.529f, 0.808f, 0.922f, 1.0f }));
+			clearValues[1].setDepthStencil({ 1.0f, 0 });
+
+			auto const renderPassInfo = vk::RenderPassBeginInfo()
+				.setRenderPass(renderPass)
+				.setFramebuffer(swapchainFrameBuffers[imageIndex])
+				.setRenderArea({ { 0, 0 }, swapchainExtent })
+				.setClearValueCount((uint32_t)clearValues.size())
+				.setPClearValues(clearValues.data());
+
+			dynamicCmdBuffer.beginRenderPass(&renderPassInfo, vk::SubpassContents::eInline);
+
+			dynamicCmdBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
+
+			// sort the drawList from the lowest depth value, for alpha blending and depth tests purpose
+			std::sort(Entity::drawList.begin(), Entity::drawList.end(), [](Entity* a, Entity* b) -> bool { return a->getDepth() < b->getDepth(); });
+
+			if (Entity::drawList.size() > 0) {
+				// ----------DRAW SPRITES----------
+				//binding the vertex buffer
+				const vk::DeviceSize offsets[] = { 0 };
+				dynamicCmdBuffer.bindVertexBuffers(0, 1, &ResourceManager::getInstance().spritesVertexBuffer, offsets);
+				//binding the index buffer
+				dynamicCmdBuffer.bindIndexBuffer(ResourceManager::getInstance().spritesIndexBuffer, 0, vk::IndexType::eUint32);
+
+				for (auto &entity : Entity::drawList) {
+
+					if (!entity->hasSprite())
+						continue;
+
+					// bind descriptor sets
+					const vk::DescriptorSet dSets[] = { entity->getSprite().descriptorSet, mainCamera.getDescriptorSet() };
+					const uint32_t dOffsets[] = { static_cast<uint32_t>(entity->getSprite().uBuffInfo.offset) };
+					dynamicCmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
+						pipelineLayout, 0, 2, dSets, 1, dOffsets);
+
+					//drawing indexed
+					dynamicCmdBuffer.drawIndexed(6, 1, 0, entity->getSprite().getSpriteID() * 4, 0); // 6 indices for every 4 vertices in vBuffer (1 rect)
+				}
+				// --------------------------------
+			}
+
+			dynamicCmdBuffer.endRenderPass();
+		}
+		dynamicCmdBuffer.end();
 	}
 }

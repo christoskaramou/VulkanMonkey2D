@@ -40,7 +40,7 @@ namespace vm {
 		~Renderer();
 
 		// draw
-		void summit();
+		void summit(bool useDynamicCmdBuffer = true);
 
 		// scene
 		void pushSpritesToBuffers(); // after the scene is made, all sprites created are auto pushed in a big buffer
@@ -130,6 +130,7 @@ namespace vm {
 		std::vector<vk::Buffer> vertexBuffers{};				// vertex buffers
 		std::vector<vk::Buffer> indexBuffers{};					// index buffers
 		std::vector<vk::CommandBuffer> commandBuffers{};		// command buffers
+		vk::CommandBuffer dynamicCmdBuffer;						// one time summit command buffer
 		std::vector<vk::Buffer> uniformBuffers{};				// uniform buffers
 		std::vector<vk::Buffer> stagingUniformBuffers{};		// staging uniform bufer
 		vk::Image depthImage;									// depth image
@@ -149,7 +150,8 @@ namespace vm {
 		void createCommandPool();
 		void createCommandBuffers();
 		void destroyCommandPool();
-		void recordCommandBuffers();
+		void recordOneTimeSubmitCommandBuffers(uint32_t imageIndex);
+		void recordSimultaneousUseCommandBuffers();
 		void createStagingUniformBuffers();
 		void destroyStagingUniformBuffers();
 		void createUniformBuffers();

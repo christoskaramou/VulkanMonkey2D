@@ -3,7 +3,6 @@
 
 namespace vm {
 	std::vector<Sprite*> Sprite::sprites{};
-	std::vector<unsigned int> Sprite::drawList{};
 	Sprite::Sprite(Rect definedRect, std::string textureName)
 	{
 		ResourceManager &rm = ResourceManager::getInstance();

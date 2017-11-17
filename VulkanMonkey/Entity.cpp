@@ -2,19 +2,13 @@
 #include "ErrorAndLog.h"
 
 namespace vm {
-	std::vector<std::shared_ptr<Entity>> Entity::entities{};
+	std::vector <Entity*>	Entity::drawList{};
+	std::vector<Entity>		Entity::entities{};
 	Entity::Entity()
 	{
-		rect = { b2Vec2(0.0f, 0.0f), b2Vec2(0.0f, 0.0f) };
+		rect = Rect();
 		body = nullptr;
 		sprite = nullptr;
-		depth = 0.0f;
-		model = glm::mat4(1.0f);
-		angle = 0.0f;
-	}
-	Entity::Entity(std::shared_ptr<Sprite> sp)
-	{
-		setSprite(sp);
 		depth = 0.0f;
 		model = glm::mat4(1.0f);
 		angle = 0.0f;
@@ -22,7 +16,7 @@ namespace vm {
 	Entity::~Entity()
 	{
 		body = nullptr;
-		sprite = nullptr; // sprites have shared pointers, so auto delete is called sometime
+		sprite = nullptr;
 	}
 	void Entity::update()
 	{
@@ -33,7 +27,7 @@ namespace vm {
 	void Entity::draw()
 	{
 		if (!sprite) return;
-		Sprite::drawList.push_back(sprite->getSpriteID());
+		Entity::drawList.push_back(this);
 	}
 	void Entity::setDepth(const float depth)
 	{
@@ -41,10 +35,16 @@ namespace vm {
 		this->depth = depth;
 	}
 
+	float Entity::getDepth()
+	{
+		return depth;
+	}
+
 	void Entity::setTransform(const b2Transform& transform)
 	{
 		angle = transform.q.GetAngle();
-		model = glm::translate(glm::mat4(), glm::vec3(transform.p.x * M2P, transform.p.y * M2P, depth)) * glm::rotate(glm::mat4(), angle, glm::vec3(0.0f, 0.0f, 1.0f));
+		model = glm::translate(glm::mat4(), glm::vec3(transform.p.x * M2P, transform.p.y * M2P, depth));
+		model = glm::rotate(model, angle, glm::vec3(0.0f, 0.0f, 1.0f));
 	}
 	float Entity::getAngle()
 	{
@@ -84,10 +84,12 @@ namespace vm {
 		boxFixtureDef.restitution = 0.1f;
 		body->CreateFixture(&boxFixtureDef);
 	}
-	void Entity::setSprite(std::shared_ptr<Sprite> sp)
+	void Entity::setSprite(Sprite* sp)
 	{
-		sprite = sp;
-		rect = sp->getRect();
+		if (sp) {
+			sprite = sp;
+			rect = sp->getRect();
+		}
 	}
 	Sprite& Entity::getSprite() 
 	{
@@ -96,6 +98,10 @@ namespace vm {
 	bool Entity::hasBody()
 	{
 		return body != nullptr;
+	}
+	bool Entity::hasSprite()
+	{
+		return sprite != nullptr;
 	}
 	glm::mat4& Entity::getTranslationMat()
 	{ 
