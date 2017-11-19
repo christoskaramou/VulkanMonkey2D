@@ -41,6 +41,7 @@ namespace vm {
 	{
 		device.waitIdle();
 		Sprite::sprites.clear();
+		PointLight::lightPool.clear();
 		destroySemaphores();
 
 		destroyDescriptorPool(); // Descriptor sets are destroyed when destroying the descriptor pool
@@ -349,8 +350,6 @@ namespace vm {
 			.setSamples(vk::SampleCountFlagBits::e1)
 			.setLoadOp(vk::AttachmentLoadOp::eClear)
 			.setStoreOp(vk::AttachmentStoreOp::eStore)
-			//.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
-			//.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
 			.setInitialLayout(vk::ImageLayout::eUndefined)
 			.setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
 
@@ -378,14 +377,6 @@ namespace vm {
 			.setPColorAttachments(&car)
 			.setPDepthStencilAttachment(&depthAttachmentRef);
 
-		//auto const dependency = vk::SubpassDependency()
-		//	.setSrcSubpass(VK_SUBPASS_EXTERNAL)
-		//	.setDstSubpass(0)
-		//	.setSrcStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput)
-		//	.setSrcAccessMask(vk::AccessFlags())
-		//	.setDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput)
-		//	.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite);
-
 		std::array<vk::AttachmentDescription, 2> attachments = { cad, depthAttachment };
 
 		auto const rpci = vk::RenderPassCreateInfo()
@@ -393,8 +384,6 @@ namespace vm {
 			.setPAttachments(attachments.data())
 			.setSubpassCount(1)
 			.setPSubpasses(&sd);
-			//.setDependencyCount(1)
-			//.setPDependencies(&dependency);
 
 		errCheck(device.createRenderPass(&rpci, nullptr, &renderPass));
 	}
@@ -426,42 +415,44 @@ namespace vm {
 	}
 	void Renderer::createVertexBuffers()
 	{
-		ResourceManager &rm = ResourceManager::getInstance();
+		if (Sprite::sprites.size() > 0) {
+			ResourceManager &rm = ResourceManager::getInstance();
 
-		// SPRITES VERTEX BUFFER
-		// local device buffer (GPU mem : CPU not accessible)
-		vk::DeviceSize vBufSize = Sprite::sprites.size() * sizeof(Vertex) * 4;
-		helper.createBuffer(gpu, device, vBufSize,
-			vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer,
-			vk::MemoryPropertyFlagBits::eDeviceLocal,
-			rm.spritesVertexBuffer, rm.spritesVertexBufferMem);
-		
-		std::vector<Vertex> verts{};
-		for (auto &s : Sprite::sprites) {
-			verts.push_back(s->vertices[0]);
-			verts.push_back(s->vertices[1]);
-			verts.push_back(s->vertices[2]);
-			verts.push_back(s->vertices[3]);
+			// SPRITES VERTEX BUFFER
+			// local device buffer (GPU mem : CPU not accessible)
+			vk::DeviceSize vBufSize = Sprite::sprites.size() * sizeof(Vertex) * 4;
+			helper.createBuffer(gpu, device, vBufSize,
+				vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer,
+				vk::MemoryPropertyFlagBits::eDeviceLocal,
+				rm.spritesVertexBuffer, rm.spritesVertexBufferMem);
+
+			std::vector<Vertex> verts{};
+			for (auto &s : Sprite::sprites) {
+				verts.push_back(s->vertices[0]);
+				verts.push_back(s->vertices[1]);
+				verts.push_back(s->vertices[2]);
+				verts.push_back(s->vertices[3]);
+			}
+			// staging buffer (GPU mem : CPU accessible)
+			vk::Buffer stagingBuffer;
+			vk::DeviceMemory stagingBufferMemory;
+			helper.createBuffer(gpu, device, vBufSize,
+				vk::BufferUsageFlagBits::eTransferSrc,
+				vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
+				stagingBuffer, stagingBufferMemory);
+
+			// get a pointer to the staging buffer memory and copy the (CPU) data in it
+			void * data;
+			auto const offset = vk::DeviceSize();
+			auto const memFlags = vk::MemoryMapFlags(); //0
+			device.mapMemory(stagingBufferMemory, offset, vBufSize, memFlags, &data);
+			memcpy(data, verts.data(), (size_t)vBufSize);
+			device.unmapMemory(stagingBufferMemory);
+
+			// copy staging buffer to local buffer
+			helper.copyBuffer(device, commandPool, graphicsQueue, &stagingBuffer, &rm.spritesVertexBuffer, &vBufSize);
+			helper.destroyBuffer(device, stagingBuffer, stagingBufferMemory);
 		}
-		// staging buffer (GPU mem : CPU accessible)
-		vk::Buffer stagingBuffer;
-		vk::DeviceMemory stagingBufferMemory;
-		helper.createBuffer(gpu, device, vBufSize,
-			vk::BufferUsageFlagBits::eTransferSrc,
-			vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
-			stagingBuffer, stagingBufferMemory);
-
-		// get a pointer to the staging buffer memory and copy the (CPU) data in it
-		void * data;
-		auto const offset = vk::DeviceSize();
-		auto const memFlags = vk::MemoryMapFlags(); //0
-		device.mapMemory(stagingBufferMemory, offset, vBufSize, memFlags, &data);
-		memcpy(data, verts.data(), (size_t)vBufSize);
-		device.unmapMemory(stagingBufferMemory);
-
-		// copy staging buffer to local buffer
-		helper.copyBuffer(device, commandPool, graphicsQueue, &stagingBuffer, &rm.spritesVertexBuffer, &vBufSize);
-		helper.destroyBuffer(device, stagingBuffer, stagingBufferMemory);
 	}
 	void Renderer::destroyVertexBuffers()
 	{
@@ -472,35 +463,37 @@ namespace vm {
 	}
 	void Renderer::createIndexBuffers()
 	{
-		ResourceManager &rm = ResourceManager::getInstance();
+		if (Sprite::sprites.size() > 0) {
+			ResourceManager &rm = ResourceManager::getInstance();
 
-		// SPRITES INDEX BUFFER
-		// local device buffer (GPU mem : CPU not accessible)
-		vk::DeviceSize iBufSize = sizeof(uint32_t) * 6;
-		helper.createBuffer(gpu, device, iBufSize,
-			vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
-			vk::MemoryPropertyFlagBits::eDeviceLocal,
-			rm.spritesIndexBuffer, rm.spritesIndexBufferMem);
+			// SPRITES INDEX BUFFER
+			// local device buffer (GPU mem : CPU not accessible)
+			vk::DeviceSize iBufSize = sizeof(uint32_t) * 6;
+			helper.createBuffer(gpu, device, iBufSize,
+				vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
+				vk::MemoryPropertyFlagBits::eDeviceLocal,
+				rm.spritesIndexBuffer, rm.spritesIndexBufferMem);
 
-		// staging buffer (GPU mem : CPU accessible)
-		vk::Buffer stagingBuffer;
-		vk::DeviceMemory stagingBufferMemory;
-		helper.createBuffer(gpu, device, iBufSize,
-			vk::BufferUsageFlagBits::eTransferSrc,
-			vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
-			stagingBuffer, stagingBufferMemory);
+			// staging buffer (GPU mem : CPU accessible)
+			vk::Buffer stagingBuffer;
+			vk::DeviceMemory stagingBufferMemory;
+			helper.createBuffer(gpu, device, iBufSize,
+				vk::BufferUsageFlagBits::eTransferSrc,
+				vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
+				stagingBuffer, stagingBufferMemory);
 
-		// get a pointer to the staging buffer memory and copy the (CPU) data in it
-		void * data;
-		auto const offset = vk::DeviceSize();
-		auto const memFlags = vk::MemoryMapFlags(); //0
-		device.mapMemory(stagingBufferMemory, offset, iBufSize, memFlags, &data);
-		memcpy(data, Sprite::sprites[0]->indices.data(), (size_t)iBufSize);
-		device.unmapMemory(stagingBufferMemory);
+			// get a pointer to the staging buffer memory and copy the (CPU) data in it
+			void * data;
+			auto const offset = vk::DeviceSize();
+			auto const memFlags = vk::MemoryMapFlags(); //0
+			device.mapMemory(stagingBufferMemory, offset, iBufSize, memFlags, &data);
+			memcpy(data, Sprite::sprites[0]->indices.data(), (size_t)iBufSize);
+			device.unmapMemory(stagingBufferMemory);
 
-		// copy staging buffer to local buffer
-		helper.copyBuffer(device, commandPool, graphicsQueue, &stagingBuffer, &rm.spritesIndexBuffer, &iBufSize);
-		helper.destroyBuffer(device, stagingBuffer, stagingBufferMemory);
+			// copy staging buffer to local buffer
+			helper.copyBuffer(device, commandPool, graphicsQueue, &stagingBuffer, &rm.spritesIndexBuffer, &iBufSize);
+			helper.destroyBuffer(device, stagingBuffer, stagingBufferMemory);
+		}
 	}
 	void Renderer::destroyIndexBuffers()
 	{
@@ -511,34 +504,57 @@ namespace vm {
 	}
 	void Renderer::createUniformBuffers()
 	{
-		//SPRITES UNIFORM BUFFER
-		ResourceManager &rm = ResourceManager::getInstance();
-		std::vector<UniformBufferObject> ubos;
-		for (auto &s : Sprite::sprites) {
-			ubos.push_back(s->ubo);
+		if (Sprite::sprites.size() > 0) {
+			//SPRITES UNIFORM BUFFER
+			ResourceManager &rm = ResourceManager::getInstance();
+			std::vector<UniformBufferObject> ubos;
+			for (auto &s : Sprite::sprites) {
+				ubos.push_back(s->ubo);
+			}
+			vk::DeviceSize uniSize = Sprite::sprites.size() * Sprite::sprites[0]->uBuffInfo.size;
+			helper.createBuffer(gpu, device, uniSize,
+				vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eUniformBuffer,
+				vk::MemoryPropertyFlagBits::eHostVisible,
+				rm.spritesUniformBuffer, rm.spritesUniformBufferMem);
+
+			// get the pointers to the later one big uniform mapped memory to avoid mapping-unmpapping each sprite,
+			// persistent mapping gives a good boost if there are multiple sprites
+			for (auto &s : Sprite::sprites)
+				s->setPointerToUniformBufferMem(rm.spritesUniformBufferMem);
+
+			// persistent mapping
+			errCheck(device.mapMemory(rm.spritesUniformBufferMem, vk::DeviceSize(), uniSize, vk::MemoryMapFlags(), &rm.spritesUniformData));
+			memcpy(rm.spritesUniformData, ubos.data(), uniSize);
 		}
-		vk::DeviceSize uniSize = Sprite::sprites.size() * Sprite::sprites[0]->uBuffInfo.size;
-		helper.createBuffer(gpu, device, uniSize,
-			vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eUniformBuffer,
-			vk::MemoryPropertyFlagBits::eHostVisible, //vk::MemoryPropertyFlagBits::eDeviceLocal
-			rm.spritesUniformBuffer, rm.spritesUniformBufferMem);
+		{
+			//LIGHTS UNIFORM BUFFER
+			ResourceManager &rm = ResourceManager::getInstance();
 
-		// get the pointers to the later one big uniform mapped memory to avoid mapping-unmpapping each sprite,
-		// persistent mapping gives a good boost if there are multiple sprites
-		for (auto &s : Sprite::sprites)
-			s->setPointerToUniformBufferMem(rm.spritesUniformBufferMem);
+			std::vector<UniformLightObject> ulos;
+			for (auto i = 0; i < MAX_POINT_LIGHTS; i++)
+				ulos.push_back(PointLight::lightPool[i]->ulo);
 
-		// persistent mapping
-		errCheck(device.mapMemory(rm.spritesUniformBufferMem, vk::DeviceSize(), uniSize, vk::MemoryMapFlags(), &rm.spritesUniformData));
-		memcpy(rm.spritesUniformData, ubos.data(), uniSize);
-		//device.unmapMemory(rm.spritesUniformBufferMem);
+			vk::DeviceSize uniSize = MAX_POINT_LIGHTS * sizeof(UniformLightObject); // TODO: check for alignmens
+			helper.createBuffer(gpu, device, uniSize,
+				vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eUniformBuffer,
+				vk::MemoryPropertyFlagBits::eHostVisible,
+				rm.pointLightsUniformBuffer, rm.pointLightsUniformBufferMem);
+
+			// get the pointers to the later one big uniform mapped memory to avoid mapping-unmpapping each light,
+			// persistent mapping gives a good boost if there are multiple lights
+			for (auto i = 0; i < MAX_POINT_LIGHTS; i++)
+				PointLight::lightPool[i]->setPointerToUniformBufferMem(rm.pointLightsUniformBufferMem);
+
+			// persistent mapping
+			errCheck(device.mapMemory(rm.pointLightsUniformBufferMem, vk::DeviceSize(), uniSize, vk::MemoryMapFlags(), &rm.pointLightsUniformData));
+			memcpy(rm.pointLightsUniformData, ulos.data(), uniSize);
+		}
 	}
 	void Renderer::destroyUniformBuffers()
 	{
-		helper.destroyBuffer(device, ResourceManager::getInstance().spritesUniformBuffer, ResourceManager::getInstance().spritesUniformBufferMem);
-
-		device.unmapMemory(mainCamera.getUniformBufferMem());
 		helper.destroyBuffer(device, mainCamera.getUniformBuffer(), mainCamera.getUniformBufferMem());
+		helper.destroyBuffer(device, ResourceManager::getInstance().spritesUniformBuffer, ResourceManager::getInstance().spritesUniformBufferMem);
+		helper.destroyBuffer(device, ResourceManager::getInstance().pointLightsUniformBuffer, ResourceManager::getInstance().pointLightsUniformBufferMem);
 	}
 	void Renderer::createCommandPool()
 	{
@@ -604,23 +620,28 @@ namespace vm {
 
 		// for mvp uniform
 		descriptorPoolSizes.push_back(vk::DescriptorPoolSize()
-			.setType(vk::DescriptorType::eUniformBufferDynamic)	//descriptor type
+			.setType(vk::DescriptorType::eUniformBufferDynamic)				//descriptor type
 			.setDescriptorCount((uint32_t)Sprite::sprites.size() + 2));		//descriptor count
 
 		// for texture
 		descriptorPoolSizes.push_back(vk::DescriptorPoolSize()
-			.setType(vk::DescriptorType::eCombinedImageSampler)	//descriptor type
-			.setDescriptorCount((uint32_t)Sprite::sprites.size() + 2));	//descriptor count
+			.setType(vk::DescriptorType::eCombinedImageSampler)				//descriptor type
+			.setDescriptorCount((uint32_t)Sprite::sprites.size() + 2));		//descriptor count
+
+		// for pointLights
+		descriptorPoolSizes.push_back(vk::DescriptorPoolSize()
+			.setType(vk::DescriptorType::eUniformBuffer)					//descriptor type
+			.setDescriptorCount(1));										//descriptor count
 
 		// for camera
 		descriptorPoolSizes.push_back(vk::DescriptorPoolSize()
-			.setType(vk::DescriptorType::eUniformBuffer)	//descriptor type
-			.setDescriptorCount(1));						//descriptor count
+			.setType(vk::DescriptorType::eUniformBuffer)			//descriptor type
+			.setDescriptorCount(1));								//descriptor count
 
 		auto const createInfo = vk::DescriptorPoolCreateInfo()
 			.setPoolSizeCount((uint32_t)descriptorPoolSizes.size())
 			.setPPoolSizes(descriptorPoolSizes.data())
-			.setMaxSets((uint32_t)Sprite::sprites.size() + 5);
+			.setMaxSets((uint32_t)Sprite::sprites.size() + 6);
 
 		errCheck(device.createDescriptorPool(&createInfo, nullptr, &descriptorPool));
 	}
@@ -630,18 +651,12 @@ namespace vm {
 	}
 	void Renderer::createDescriptorSet()
 	{
-		ResourceManager &rm = ResourceManager::getInstance();
-
-		//standard uniform buffer size
-		vk::DeviceSize uBufferSize = sizeof(UniformBufferObject);
-		if (uBufferSize < rm.getGpuProperties().limits.minUniformBufferOffsetAlignment)
-			uBufferSize = rm.getGpuProperties().limits.minUniformBufferOffsetAlignment;
-
-		for (auto &s : Sprite::sprites) {
-			s->createDescriptorSet(descriptorPool, s->texture);
-		}
-
 		mainCamera.createDescriptorSet(descriptorPool);
+
+		for (auto &s : Sprite::sprites) 
+			s->createDescriptorSet(descriptorPool, s->texture);
+
+		PointLight::createDescriptorSet(descriptorPool);
 
 	}
 	void Renderer::createDescriptorSetLayout()
@@ -651,6 +666,9 @@ namespace vm {
 
 		// sprite descriptionSetLayout
 		ResourceManager::getInstance().setUpSpriteDescriptorSetLayout();
+
+		// point light descriptionSetLayout
+		ResourceManager::getInstance().setUpPointLightsDescriptorSetLayout();
 	}
 	void Renderer::destroyDescriptorSetLayout()
 	{
@@ -658,6 +676,7 @@ namespace vm {
 			device.destroyDescriptorSetLayout(ds);
 		device.destroyDescriptorSetLayout(ResourceManager::getInstance().spritesDescriptorSetLayout);
 		device.destroyDescriptorSetLayout(ResourceManager::getInstance().cameraDescriptorSetLayout);
+		device.destroyDescriptorSetLayout(ResourceManager::getInstance().pointLightsDescriptorSetLayout);
 	}
 	void Renderer::createGraphicsPipeline()
 	{
@@ -780,12 +799,21 @@ namespace vm {
 			.setBlendConstants({ 1.0f, 0.0f, 0.0f, 0.0f });
 
 		// Pipeline layout for passing uniform values to shaders
-		vk::DescriptorSetLayout descSetLayouts[] = { ResourceManager::getInstance().spritesDescriptorSetLayout, ResourceManager::getInstance().cameraDescriptorSetLayout };
+		vk::DescriptorSetLayout descSetLayouts[] = {	ResourceManager::getInstance().spritesDescriptorSetLayout,
+														ResourceManager::getInstance().pointLightsDescriptorSetLayout,
+														ResourceManager::getInstance().cameraDescriptorSetLayout };
+
+		// Define push constant
+		auto pushConstantRange = vk::PushConstantRange()
+			.setStageFlags(vk::ShaderStageFlagBits::eFragment)
+			.setSize(static_cast<uint32_t>(sizeof(AmbientLight::color)))
+			.setOffset(0);
+
 		auto plci = vk::PipelineLayoutCreateInfo()
-			.setSetLayoutCount(2)
+			.setSetLayoutCount(3)
 			.setPSetLayouts(descSetLayouts)
-			.setPushConstantRangeCount(0)
-			.setPPushConstantRanges(nullptr);
+			.setPushConstantRangeCount(1)
+			.setPPushConstantRanges(&pushConstantRange);
 
 		//device.createPipelineLayout(&plci, nullptr, &pipelineLayout);
 		errCheck(device.createPipelineLayout(&plci, nullptr, &pipelineLayout));
@@ -808,11 +836,6 @@ namespace vm {
 			.setBasePipelineIndex(-1); // optional
 		;
 		errCheck(device.createGraphicsPipelines(nullptr, 1, &gpci, nullptr, &pipeline));
-
-		/*iasci.topology = vk::PrimitiveTopology::eLineStrip;
-		errCheck(device.createPipelineLayout(&plci, nullptr, &pipelineLayoutLines));
-		errCheck(device.createGraphicsPipelines(nullptr, 1, &gpci, nullptr, &pipelineLines));*/
-
 
 		//	Destroy shader modules after graphics pipeline creation
 		device.destroyShaderModule(fShaderMod);
@@ -1025,7 +1048,7 @@ namespace vm {
 	void Renderer::summit(bool useDynamicCmdBuffer)
 	{
 
-		//presentQueue.waitIdle();
+		presentQueue.waitIdle();
 		//recordSimultaneousUseCommandBuffers();
 		// 1. Acquiring an image from the swapchain
 		//(this image is attached in the framebuffer)
@@ -1042,7 +1065,7 @@ namespace vm {
 		}
 		vk::CommandBuffer* cmdBuffer;
 		if (useDynamicCmdBuffer) {
-			recordOneTimeSubmitCommandBuffers(imageIndex);
+			recordOneTimeSubmitCommandBuffer(imageIndex);
 			cmdBuffer = &dynamicCmdBuffer;
 		}
 		else {
@@ -1091,8 +1114,9 @@ namespace vm {
 		createDescriptorPool();
 		createDescriptorSet();
 
-		recordSimultaneousUseCommandBuffers();
 		createSemaphores();
+
+		recordSimultaneousUseCommandBuffers();
 	}
 	// TODO needs reword, Entity::entities is not working atm
 	void Renderer::recordSimultaneousUseCommandBuffers()
@@ -1112,7 +1136,7 @@ namespace vm {
 			// Render Pass
 			{
 				std::array<vk::ClearValue, 2> clearValues = {};
-				clearValues[0].setColor(vk::ClearColorValue().setFloat32({ 0.529f, 0.808f, 0.922f, 1.0f }));
+				clearValues[0].setColor(vk::ClearColorValue().setFloat32({ 0.05f, 0.05f, 0.05f, 1.f }));
 				clearValues[1].setDepthStencil({ 1.0f, 0 });
 
 				auto const renderPassInfo = vk::RenderPassBeginInfo()
@@ -1124,12 +1148,13 @@ namespace vm {
 
 				commandBuffers[i].beginRenderPass(&renderPassInfo, vk::SubpassContents::eInline);
 
+				// push constants
+				commandBuffers[i].pushConstants(pipelineLayout, vk::ShaderStageFlagBits::eFragment, 0, static_cast<uint32_t>(sizeof(AmbientLight::color)), &AmbientLight::color);
+
 				commandBuffers[i].bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
 
-				// sort the drawList from the lowest depth value, for alpha blending and depth tests purpose
-				std::sort(Entity::entities.begin(), Entity::entities.end(), [](Entity a, Entity b) -> bool { return a.getDepth() < b.getDepth(); });
-
-				if (Entity::entities.size() > 0) {
+				if (Sprite::sprites.size() > 0) {
+					
 					// ----------DRAW SPRITES----------
 					//binding the vertex buffer
 					const vk::DeviceSize offsets[] = { 0 };
@@ -1137,21 +1162,18 @@ namespace vm {
 					//binding the index buffer
 					commandBuffers[i].bindIndexBuffer(ResourceManager::getInstance().spritesIndexBuffer, 0, vk::IndexType::eUint32);
 
-					int32_t vOffset = 0;
-					for (auto &entity : Entity::entities) {
+					for (auto &s : Sprite::sprites) {
 
-						if (!entity.hasSprite())
-							continue;
+						if (!s) continue;
 
 						// bind descriptor sets
-						const vk::DescriptorSet dSets[] = { entity.getSprite().descriptorSet, mainCamera.getDescriptorSet() };
-						const uint32_t dOffsets[] = { static_cast<uint32_t>(entity.getSprite().uBuffInfo.offset) };
+						const vk::DescriptorSet dSets[] = { s->descriptorSet, mainCamera.getDescriptorSet(), PointLight::descriptorSet };
+						const uint32_t dOffsets[] = { static_cast<uint32_t>(s->uBuffInfo.offset), 0, 0 };
 						commandBuffers[i].bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
-							pipelineLayout, 0, 2, dSets, 1, dOffsets);
+							pipelineLayout, 0, 3, dSets, 1, dOffsets);
 
 						//drawing indexed
-						commandBuffers[i].drawIndexed(6, 1, 0, vOffset, 0); // 6 indices for every 4 vertices in vBuffer (1 rect)
-						vOffset += 4;
+						commandBuffers[i].drawIndexed(6, 1, 0, s->getSpriteID() * 4, 0); // 6 indices for every 4 vertices in vBuffer (1 rect)
 					}
 					// --------------------------------
 				}
@@ -1160,7 +1182,7 @@ namespace vm {
 			commandBuffers[i].end();
 		}
 	}
-	void Renderer::recordOneTimeSubmitCommandBuffers(uint32_t imageIndex)
+	void Renderer::recordOneTimeSubmitCommandBuffer(uint32_t imageIndex)
 	{
 		//	Begin Command Buffer
 		//	|	Begin Render Pass
@@ -1176,7 +1198,7 @@ namespace vm {
 		// Render Pass
 		{
 			std::array<vk::ClearValue, 2> clearValues = {};
-			clearValues[0].setColor(vk::ClearColorValue().setFloat32({ 0.529f, 0.808f, 0.922f, 1.0f }));
+			clearValues[0].setColor(vk::ClearColorValue().setFloat32({ 0.05f, 0.05f, 0.05f, 1.f }));
 			clearValues[1].setDepthStencil({ 1.0f, 0 });
 
 			auto const renderPassInfo = vk::RenderPassBeginInfo()
@@ -1188,12 +1210,16 @@ namespace vm {
 
 			dynamicCmdBuffer.beginRenderPass(&renderPassInfo, vk::SubpassContents::eInline);
 
+			// push constants
+			dynamicCmdBuffer.pushConstants(pipelineLayout, vk::ShaderStageFlagBits::eFragment, 0, static_cast<uint32_t>(sizeof(AmbientLight::color)), &AmbientLight::color);
+
 			dynamicCmdBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
 
-			// sort the drawList from the lowest depth value, for alpha blending and depth tests purpose
-			std::sort(Entity::drawList.begin(), Entity::drawList.end(), [](Entity* a, Entity* b) -> bool { return a->getDepth() < b->getDepth(); });
-
 			if (Entity::drawList.size() > 0) {
+
+				// sort the drawList from the lowest depth value, for alpha blending and depth tests purpose
+				std::sort(Entity::drawList.begin(), Entity::drawList.end(), [](Entity* a, Entity* b) -> bool { return a->getDepth() < b->getDepth(); });
+
 				// ----------DRAW SPRITES----------
 				//binding the vertex buffer
 				const vk::DeviceSize offsets[] = { 0 };
@@ -1207,10 +1233,10 @@ namespace vm {
 						continue;
 
 					// bind descriptor sets
-					const vk::DescriptorSet dSets[] = { entity->getSprite().descriptorSet, mainCamera.getDescriptorSet() };
-					const uint32_t dOffsets[] = { static_cast<uint32_t>(entity->getSprite().uBuffInfo.offset) };
+					const vk::DescriptorSet dSets[] = { entity->getSprite().descriptorSet, mainCamera.getDescriptorSet(), PointLight::descriptorSet };
+					const uint32_t dOffsets[] = { static_cast<uint32_t>(entity->getSprite().uBuffInfo.offset), 0, 0 };
 					dynamicCmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
-						pipelineLayout, 0, 2, dSets, 1, dOffsets);
+						pipelineLayout, 0, 3, dSets, 1, dOffsets);
 
 					//drawing indexed
 					dynamicCmdBuffer.drawIndexed(6, 1, 0, entity->getSprite().getSpriteID() * 4, 0); // 6 indices for every 4 vertices in vBuffer (1 rect)

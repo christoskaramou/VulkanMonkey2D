@@ -14,4 +14,3 @@ namespace vm {
 		void checkInput(double delta) override;
 	};
 }
-

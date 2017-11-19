@@ -7,14 +7,12 @@ namespace vm {
 	void keysCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 	void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 
+	Camera *camera;
 	Entity player;
 	std::vector<Entity> objects;
-	b2World* world;
-	Camera *camera;
 
 	void Game1::load()
 	{
-
 		// set up the window (renderer)
 		window.createWindow(1200, 800, "", nullptr, nullptr);
 		window.setWindowUserPointer(this); // pointer for callbacks usage
@@ -22,14 +20,14 @@ namespace vm {
 		window.setKeyCallback(keysCallback);
 		window.setScrollCallback(scroll_callback);
 
-		const float SCALE = 2.f;
+		const float SCALE = 1.f;
 
 		auto seed = std::chrono::system_clock::now().time_since_epoch().count();
 		std::default_random_engine gen((unsigned int)seed);
 		std::uniform_real_distribution<float> x(-800.0f * SCALE, 800.0f * SCALE);
 		std::uniform_real_distribution<float> y(-800.0f * SCALE, 800.0f * SCALE);
-		std::uniform_real_distribution<float> h(1.f, 17.0f);
-		std::uniform_real_distribution<float> w(1.f, 17.0f);
+		std::uniform_real_distribution<float> h(10.f, 17.0f);
+		std::uniform_real_distribution<float> w(10.f, 17.0f);
 		
 		// SCENE
 
@@ -41,42 +39,11 @@ namespace vm {
 		player.addBoxShape(rect.size.x, rect.size.y);
 		player.body->SetType(b2BodyType::b2_dynamicBody);
 		player.body->SetFixedRotation(true);
+		player.body->GetFixtureList()->SetRestitution(0.f);
+		player.body->SetGravityScale(0.f);
+		//player.body->
 
 		Rect rect1;
-
-		for (int i = 0; i < 100 * SCALE; i++) {
-			rect1 = { b2Vec2(x(gen), y(gen)), b2Vec2(w(gen), h(gen)) };
-			rect1.size.y = rect1.size.x;
-			objects.push_back(Entity());
-			objects.back().setSprite(new Sprite(rect1, "textures/cd.png"));
-			objects.back().createBody2D(rect1.pos.x, rect1.pos.y);
-			objects.back().addCircleShape(rect1.size.x);
-			//objects.back().addBoxShape(rect1.size.x, rect1.size.y);
-			if (i % 2 == 0)
-				objects.back().body->SetGravityScale(-1.f);
-		}
-		for (int i = 0; i < 100 * SCALE; i++) {
-			rect1 = { b2Vec2(x(gen), y(gen)), b2Vec2(w(gen), h(gen)) };
-			rect1.size.y = rect1.size.x;
-			objects.push_back(Entity());
-			objects.back().setSprite(new Sprite(rect1, "textures/circle.png"));
-			objects.back().createBody2D(rect1.pos.x, rect1.pos.y);
-			objects.back().addCircleShape(rect1.size.x * 3.5 / (float)(4));
-			//objects.back().addBoxShape(rect1.size.x, rect1.size.y);
-			if (i % 2 == 0)
-				objects.back().body->SetGravityScale(-1.f);
-		}
-		for (int i = 0; i < 100 * SCALE; i++) {
-			rect1 = { b2Vec2(x(gen), y(gen)), b2Vec2(w(gen), h(gen)) };
-			rect1.size.y = rect1.size.x;
-			objects.push_back(Entity());
-			objects.back().setSprite(new Sprite(rect1, "textures/circle-maze.png"));
-			objects.back().createBody2D(rect1.pos.x, rect1.pos.y);
-			objects.back().addCircleShape(rect1.size.x);
-			//objects.back().addBoxShape(rect1.size.x, rect1.size.y);
-			if (i % 2 == 0)
-				objects.back().body->SetGravityScale(-1.f);
-		}
 		for (int i = 0; i < 100 * SCALE; i++) {
 			rect1 = { b2Vec2(x(gen), y(gen)), b2Vec2(w(gen), h(gen)) };
 			rect1.size.y = rect1.size.x;
@@ -84,16 +51,40 @@ namespace vm {
 			objects.back().setSprite(new Sprite(rect1, "textures/sun.png"));
 			objects.back().createBody2D(rect1.pos.x, rect1.pos.y);
 			objects.back().addCircleShape(rect1.size.x / 2.5f);
-			//objects.back().addBoxShape(rect1.size.x, rect1.size.y);
 			if (i % 2 == 0)
 				objects.back().body->SetGravityScale(-1.f);
-		}
-		for (int i = 0; i < 100 * SCALE; i++) {
+
+			rect1 = { b2Vec2(x(gen), y(gen)), b2Vec2(w(gen), h(gen)) };
+			rect1.size.y = rect1.size.x;
+			objects.push_back(Entity());
+			objects.back().setSprite(new Sprite(rect1, "textures/cd.png"));
+			objects.back().createBody2D(rect1.pos.x, rect1.pos.y);
+			objects.back().addCircleShape(rect1.size.x);
+			if (i % 2 == 0)
+				objects.back().body->SetGravityScale(-1.f);
+
+			rect1 = { b2Vec2(x(gen), y(gen)), b2Vec2(w(gen), h(gen)) };
+			rect1.size.y = rect1.size.x;
+			objects.push_back(Entity());
+			objects.back().setSprite(new Sprite(rect1, "textures/circle.png"));
+			objects.back().createBody2D(rect1.pos.x, rect1.pos.y);
+			objects.back().addCircleShape(rect1.size.x);
+			if (i % 2 == 0)
+				objects.back().body->SetGravityScale(-1.f);
+
+			rect1 = { b2Vec2(x(gen), y(gen)), b2Vec2(w(gen), h(gen)) };
+			rect1.size.y = rect1.size.x;
+			objects.push_back(Entity());
+			objects.back().setSprite(new Sprite(rect1, "textures/circle-maze.png"));
+			objects.back().createBody2D(rect1.pos.x, rect1.pos.y);
+			objects.back().addCircleShape(rect1.size.x);
+			if (i % 2 == 0)
+				objects.back().body->SetGravityScale(-1.f);
+
 			rect1 = { b2Vec2(x(gen), y(gen)), b2Vec2(w(gen), h(gen)) };
 			objects.push_back(Entity());
 			objects.back().setSprite(new Sprite(rect1, "textures/default.jpg"));
 			objects.back().createBody2D(rect1.pos.x, rect1.pos.y);
-			//objects.back().addCircleShape(rect1.size.x);
 			objects.back().addBoxShape(rect1.size.x, rect1.size.y);
 			if (i % 2 == 0)
 				objects.back().body->SetGravityScale(-1.f);
@@ -140,13 +131,18 @@ namespace vm {
 		objects.back().createBody2D(rect1.pos.x, rect1.pos.y);
 		objects.back().addBoxShape(rect1.size.x, rect1.size.y);
 		objects.back().body->SetType(b2BodyType::b2_kinematicBody);
+
+		PointLight &light = pointLight[0];
+		light.attachTo(player.getTranslationMat());
+		light.setRadius(100.f);
+		light.setColor({ 1.f, 0.3f, 1.f, 0.0f });
+		light.turnOn();
+		//AmbientLight::color = { 1.f, 1.f, 1.f, 0.5f };
 	}
 
 	void Game1::init()
 	{
 		Game::init();
-		//get the physics world pointer
-		world = ResourceManager::getInstance().world;
 
 		// init the main Camera
 		Renderer &r = window.getRenderer();
@@ -159,17 +155,17 @@ namespace vm {
 
 		t.Set(b2Vec2(P2M*player.getSprite().getRect().pos.x, P2M*player.getSprite().getRect().pos.y), player.getAngle());
 		player.setTransform(t);
-		//camera->attachTo(player.getTranslationMat());
+		camera->attachTo(player.getTranslationMat());
 
 		for (auto &e : objects) {
 			t.Set(b2Vec2(P2M*e.getSprite().getRect().pos.x, P2M*e.getSprite().getRect().pos.y), e.getAngle());
 			e.setTransform(t);
 		}
-		bulletTime(1.5);
 	}
 
 	void Game1::update(double delta)
 	{
+		pointLight[0].update();
 		for (auto &e : objects) {
 			if (e.hasBody()) 
 				e.setTransform(e.body->GetTransform());
@@ -181,36 +177,47 @@ namespace vm {
 
 		camera->update();
 
-		world->Step(static_cast<float>(delta), 8, 3);
+		physics2D_Step(delta);
 	}
-	// TODO entities.draw(), does not specifies each entity to draw it self yet
 	void Game1::draw()
 	{
 		Game::draw();
-		player.draw();
 		for (auto &e : objects) {
 			e.draw();
 		}
 
-		window.getRenderer().summit();
+		player.draw();
+
+		window.getRenderer().summit(true);
 	}
 
 	void Game1::checkInput(double delta)
 	{
+		float _delta = static_cast<float>(delta);
 		if (window.getKey(KEY_A)) {
-			window.getRenderer().mainCamera.position.x -= 600.0f * static_cast<float>(delta);
+			if (gameState == GameState::Running)
+				player.body->ApplyLinearImpulseToCenter(b2Vec2(-100.f*_delta, 0), true);
 		}
 
 		if (window.getKey(KEY_D)) {
-			window.getRenderer().mainCamera.position.x += 600.0f * static_cast<float>(delta);
+			if (gameState == GameState::Running)
+				player.body->ApplyLinearImpulseToCenter(b2Vec2(100.f*_delta, 0), true);
 		}
 
 		if (window.getKey(KEY_W)) {
-			window.getRenderer().mainCamera.position.y += 600.0f * static_cast<float>(delta);
+			if (gameState == GameState::Running)
+				player.body->ApplyLinearImpulseToCenter(b2Vec2(0, 100.f*_delta), true);
 		}
 
 		if (window.getKey(KEY_S)) {
-			window.getRenderer().mainCamera.position.y -= 600.0f * static_cast<float>(delta);
+			if (gameState == GameState::Running)
+				player.body->ApplyLinearImpulseToCenter(b2Vec2(0, -100.f*_delta), true);
+		}
+		if (window.getKey(KEY_PAGE_UP)) {
+			AmbientLight::color.w = 1.f;
+		}
+		if (window.getKey(KEY_PAGE_DOWN)) {
+			AmbientLight::color.w = 0.f;
 		}
 
 		if (window.getKey(KEY_SPACE)) {
@@ -220,6 +227,14 @@ namespace vm {
 		else {
 			if (objects.back().body->GetAngularVelocity() != 0.0f)
 				objects.back().body->SetAngularVelocity(0.0f);
+		}
+		if (window.getKey(KEY_RIGHT)) {
+			pointLight[0].setRadius(pointLight[0].getRadius() + 150.f *_delta);
+		}
+		if (window.getKey(KEY_LEFT)) {
+			pointLight[0].setRadius(pointLight[0].getRadius() - 150.f *_delta);
+			if (pointLight[0].getRadius() < 0.f)
+				pointLight[0].setRadius(0.f);
 		}
 
 		if (window.getKey(KEY_P)) {

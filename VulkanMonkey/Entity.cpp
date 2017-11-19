@@ -3,20 +3,21 @@
 
 namespace vm {
 	std::vector <Entity*>	Entity::drawList{};
-	std::vector<Entity>		Entity::entities{};
 	Entity::Entity()
 	{
 		rect = Rect();
 		body = nullptr;
 		sprite = nullptr;
 		depth = 0.0f;
-		model = glm::mat4(1.0f);
+		model = glm::mat4(1.f);
 		angle = 0.0f;
+		timeScale = 1.f;
 	}
 	Entity::~Entity()
 	{
 		body = nullptr;
 		sprite = nullptr;
+		timeScale = 1.f;
 	}
 	void Entity::update()
 	{
@@ -49,6 +50,14 @@ namespace vm {
 	float Entity::getAngle()
 	{
 		return angle;
+	}
+	void Entity::setTimeScale(double timeScale)
+	{
+		this->timeScale = timeScale;
+	}
+	double Entity::getTimeScale()
+	{
+		return timeScale;
 	}
 	void Entity::createBody2D(float x, float y)
 	{

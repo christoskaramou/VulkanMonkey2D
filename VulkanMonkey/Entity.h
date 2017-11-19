@@ -14,11 +14,12 @@ namespace vm {
 		~Entity();
 
 	private:
-		Sprite*						sprite;
+		Sprite						*sprite;
 		glm::mat4					model;
 		float						angle;
 		float						depth;
 		Rect						rect;
+		double						timeScale;
 
 	public:
 		b2Body						*body;
@@ -36,6 +37,10 @@ namespace vm {
 		float getDepth();
 		void setTransform(const b2Transform& transform);
 		float getAngle();
+
+		void setTimeScale(double timeScale);
+		double getTimeScale();
+		
 
 		void setSprite(Sprite* sp);
 		Sprite& getSprite();

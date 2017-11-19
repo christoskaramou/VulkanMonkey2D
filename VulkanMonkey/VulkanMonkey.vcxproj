@@ -163,6 +163,7 @@
     <ClCompile Include="Entity.cpp" />
     <ClCompile Include="Game.cpp" />
     <ClCompile Include="Game1.cpp" />
+    <ClCompile Include="Light.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Rect.cpp" />
     <ClCompile Include="Renderer.cpp" />
@@ -179,6 +180,7 @@
     <ClInclude Include="Game.h" />
     <ClInclude Include="Game1.h" />
     <ClInclude Include="glm_.h" />
+    <ClInclude Include="Light.h" />
     <ClInclude Include="Rect.h" />
     <ClInclude Include="ResourceManager.h" />
     <ClInclude Include="Sprite.h" />

@@ -8,6 +8,7 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW\glfw3.h>
 #include <GLFW\glfw3native.h>
+#include "Light.h"
 
 namespace vm {
 	class VulkanQueueFamily
@@ -150,7 +151,7 @@ namespace vm {
 		void createCommandPool();
 		void createCommandBuffers();
 		void destroyCommandPool();
-		void recordOneTimeSubmitCommandBuffers(uint32_t imageIndex);
+		void recordOneTimeSubmitCommandBuffer(uint32_t imageIndex);
 		void recordSimultaneousUseCommandBuffers();
 		void createStagingUniformBuffers();
 		void destroyStagingUniformBuffers();

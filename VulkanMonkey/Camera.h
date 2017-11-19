@@ -76,7 +76,7 @@ namespace vm {
 			position = glm::vec3(0.0f, 0.0f, 0.9f);
 			lookVector = glm::vec3(0.0f);
 			upVector = glm::vec3(0.0f, 1.0f, 0.0f);
-			zoom = 1.f;
+			zoom = 0.7f;
 			attachedMat = nullptr;
 			UCBO = {
 				glm::ortho(-(float)screenWidth * zoom, (float)screenWidth * zoom, (float)screenHeight * zoom, -(float)screenHeight * zoom, -1.0f, 1.0f),
@@ -115,19 +115,19 @@ namespace vm {
 		{
 			if (!isUCBOmapped)
 				return; // do something when not mapped
-			float yOffset = 0.0f;
-			float xOffset = 0.0f;
 			glm::vec4 pos;
 			if (attachedMat)
-				pos = *attachedMat * glm::vec4(1.0f);
+				pos = *attachedMat * glm::vec4(position, 1.0f);
 			else
 				pos = glm::vec4(position, 1.0f);
-			UCBO.camPos = glm::translate(startingCamPos, glm::vec3(-pos.x + xOffset, -pos.y + yOffset, 0.0f));
+			UCBO.camPos = glm::translate(startingCamPos, glm::vec3(-pos.x, -pos.y, 0.0f));
 
 			memcpy(data, &UCBO, bufferSize);
 		}
-		void attachTo(glm::mat4 &attachMat) 
+		void attachTo(glm::mat4 &attachMat, float xOffset = 0.0f, float yOffset = 0.0f)
 		{
+			position.x = xOffset;
+			position.y = yOffset;
 			attachedMat = &attachMat;
 		}
 		void detach()

@@ -6,7 +6,7 @@
 namespace vm {
 	Game::Game()
 	{
-		timeFactor = 1.0;
+		timeScale = 1.0;
 		gameState = GameState::Running;
 		limitedFps = 0;
 		limitedSeconds = 0;
@@ -14,7 +14,12 @@ namespace vm {
 
 	Game::~Game()
 	{
-		
+		for (auto &s : Sprite::sprites) {
+			delete s;
+			s = nullptr;
+		}
+
+		Sprite::sprites.clear();
 	}
 
 	void vm::Game::run()
@@ -44,7 +49,7 @@ namespace vm {
 				draw();
 			}
 			else if (gameState == GameState::Running) {
-				update(delta * timeFactor);
+				update(delta * timeScale);
 				draw();
 			}
 			else if (gameState == GameState::Exit) {
@@ -128,9 +133,13 @@ namespace vm {
 	{
 		return delta;
 	}
-	void Game::bulletTime(double timeFactor)
+	void Game::setTimeScale(double timeScale)
 	{
-		this->timeFactor = timeFactor;
+		this->timeScale = timeScale;
+	}
+	double Game::getTimeScale()
+	{
+		return timeScale;
 	}
 	void Game::setMaxFPS(unsigned int fps)
 	{
@@ -144,6 +153,14 @@ namespace vm {
 	Window & Game::getWindow()
 	{
 		return window;
+	}
+	void Game::setAmbientColor(glm::vec4 color)
+	{
+		AmbientLight::color = color;
+	}
+	void Game::physics2D_Step(double delta)
+	{
+		ResourceManager::getInstance().world->Step(static_cast<float>(delta), 8, 3);
 	}
 	unsigned int Game::getMaxFps()
 	{

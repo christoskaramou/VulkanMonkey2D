@@ -26,7 +26,6 @@ namespace vm {
 		isSpriteMapped = false;
 		needsUpdate = false;
 		ubo.model = glm::mat4(1.0f);
-		ubo.view = glm::mat4(1.0f);
 
 		type = SpriteType::userDefinedRect;
 
@@ -105,13 +104,7 @@ namespace vm {
 				LOG("Uniform Buffer Memory of Sprite: " << spriteID << " is not mapped\n");
 				return;
 			}
-			//rm.getDevice().mapMemory(rm.spritesUniformBufferMem, uBuffInfo.offset, uBuffInfo.size, vk::MemoryMapFlags(), &_uniformMemory);
 			memcpy(_uniformMemory, &ubo, uBuffInfo.size);
-			//rm.getDevice().unmapMemory(rm.spritesUniformBufferMem);
-			//auto const memoryRange = vk::MappedMemoryRange()
-			//	.setMemory(rm.spritesUniformBufferMem)
-			//	.setSize(uBuffInfo.size);
-			//rm.getDevice().flushMappedMemoryRanges(1, &memoryRange);
 		}
 		// STATIC   // TODO needs rework
 		else if (type == SpriteType::userDefinedRectStatic) {

@@ -31,6 +31,9 @@
     <ClCompile Include="Game1.cpp">
       <Filter>Sources</Filter>
     </ClCompile>
+    <ClCompile Include="Light.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Camera.h">
@@ -76,6 +79,9 @@
       <Filter>Headers</Filter>
     </ClInclude>
     <ClInclude Include="Game1.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Light.h">
       <Filter>Headers</Filter>
     </ClInclude>
   </ItemGroup>

@@ -32,21 +32,27 @@ namespace vm {
 		vk::Buffer						spritesVertexBuffer;
 		vk::Buffer						spritesIndexBuffer;
 		vk::Buffer						spritesUniformBuffer;
+		vk::Buffer						pointLightsUniformBuffer;
 		vk::DeviceMemory				spritesVertexBufferMem;
-		void							*spritesUniformData;
 		vk::DeviceMemory				spritesIndexBufferMem;
 		vk::DeviceMemory				spritesUniformBufferMem;
+		vk::DeviceMemory				pointLightsUniformBufferMem;
 		vk::DescriptorSet				spritesDescriptorSet;
 		vk::DescriptorSet				playerDescriptorSet;
+		vk::DescriptorSet				pointLightsDescriptorSet;
+		void							*spritesUniformData;
+		void							*pointLightsUniformData;
 
 		std::map<std::string, Texture>	textures;
 		std::vector<Rect>				definedRects{};
 		std::vector<ShapedBuffers>		userShapedBuffers{};
 		vk::DescriptorSetLayout         cameraDescriptorSetLayout;
 		vk::DescriptorSetLayout			spritesDescriptorSetLayout;
+		vk::DescriptorSetLayout			pointLightsDescriptorSetLayout;
 		vk::Sampler                     spriteSampler;
 		void setUpCameraDescriptorSetLayout();
 		void setUpSpriteDescriptorSetLayout();
+		void setUpPointLightsDescriptorSetLayout();
 		
 		Texture& createNewTexture(std::string name);
 		int createUserDefinedBuffers(Rect &definedRect, bool reverseY = false);

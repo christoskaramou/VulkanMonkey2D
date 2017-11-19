@@ -59,6 +59,23 @@ namespace vm {
 		errCheck(pDevice.createDescriptorSetLayout(&createInfo, nullptr, &spritesDescriptorSetLayout));
 	}
 
+	void ResourceManager::setUpPointLightsDescriptorSetLayout()
+	{
+		if (!resourceManagerInitialized) {
+			LOG("******Init resource manager first******\n");
+			exit(-1);
+		}
+		auto const pLightDSLB = vk::DescriptorSetLayoutBinding()
+			.setBinding(0) // binding number in shader stages (the set = 2 binding = 0)
+			.setDescriptorCount(1) // number of descriptors contained
+			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+			.setStageFlags(vk::ShaderStageFlagBits::eFragment); // which pipeline shader stages can access
+		auto const pLightCreateInfo = vk::DescriptorSetLayoutCreateInfo()
+			.setBindingCount(1)
+			.setPBindings(&pLightDSLB);
+		errCheck(pDevice.createDescriptorSetLayout(&pLightCreateInfo, nullptr, &pointLightsDescriptorSetLayout));
+	}
+
 	Texture& ResourceManager::createNewTexture(std::string path)
 	{
 		if (!resourceManagerInitialized) {
@@ -173,7 +190,7 @@ namespace vm {
 		createNewTexture("textures/default.jpg");
 
 		// Box2D world and ground creation
-		world = new b2World(b2Vec2(0.0f, -1.f));
+		world = new b2World(b2Vec2(0.0f, -5.f));
 	}
 
 	void ResourceManager::deInit()
