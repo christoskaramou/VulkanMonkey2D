@@ -8,3 +8,7 @@ For validation_layers add to environment variables of your pc this
 Variable name: VK_INSTANCE_LAYERS
 
 Variable value: VK_LAYER_LUNARG_standard_validation
+
+Variable name: VK_LAYER_PATH
+
+Variable value: "path/to/build/layers" (release or debug build)
