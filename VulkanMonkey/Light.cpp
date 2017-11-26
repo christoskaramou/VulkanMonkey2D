@@ -34,7 +34,7 @@ namespace vm {
 	PointLight::~PointLight()
 	{
 	}
-	glm::vec2 PointLight::getPos()
+	glm::vec2 PointLight::getPos() const
 	{
 		return ulo.position;
 	}
@@ -42,13 +42,13 @@ namespace vm {
 	{
 		ulo.position = position;
 	}
-	glm::vec4 PointLight::getColor()
+	float PointLight::getLightAlpha() const
 	{
-		return ulo.color;
+		return ulo.color.w;
 	}
-	void PointLight::setColor(glm::vec4 color)
+	void PointLight::setLightAlpha(float colorAlpha)
 	{
-		ulo.color = color;
+		ulo.color.w = colorAlpha;
 	}
 	void PointLight::turnOn()
 	{
@@ -62,11 +62,15 @@ namespace vm {
 	{
 		attachedMat = &attachMat4;
 	}
+	void PointLight::detach()
+	{
+		attachedMat = nullptr;
+	}
 	void PointLight::setRadius(float radius)
 	{
 		ulo.radius = radius;
 	}
-	float PointLight::getRadius()
+	float PointLight::getRadius() const
 	{
 		return ulo.radius;
 	}
@@ -118,7 +122,7 @@ namespace vm {
 	}
 
 	// Ambient class
-	glm::vec4 AmbientLight::color = glm::vec4(1.f);
+	glm::vec4 AmbientLight::color = { .0f, 0.f, 0.f, 0.f };
 	AmbientLight::AmbientLight() {}
 	AmbientLight::~AmbientLight() {}
 }

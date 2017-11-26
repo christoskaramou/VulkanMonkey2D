@@ -3,7 +3,7 @@
 
 namespace vm {
 	// helper vk functions
-	uint32_t Helper::findMemoryType(vk::PhysicalDevice gpu, uint32_t typeFilter, vk::MemoryPropertyFlags properties)
+	uint32_t Helper::findMemoryType(vk::PhysicalDevice gpu, uint32_t typeFilter, vk::MemoryPropertyFlags properties) const
 	{
 		vk::PhysicalDeviceMemoryProperties memProperties;
 		memProperties = gpu.getMemoryProperties();
@@ -15,7 +15,7 @@ namespace vm {
 		}
 		exit(-1); // no suitable memory type
 	}
-	void Helper::createBuffer(vk::PhysicalDevice &gpu, vk::Device &device, vk::DeviceSize &size, vk::BufferUsageFlags usage, vk::MemoryPropertyFlags properties, vk::Buffer & buffer, vk::DeviceMemory & bufferMemory)
+	void Helper::createBuffer(vk::PhysicalDevice &gpu, vk::Device &device, vk::DeviceSize &size, vk::BufferUsageFlags usage, vk::MemoryPropertyFlags properties, vk::Buffer & buffer, vk::DeviceMemory & bufferMemory) const
 	{
 		//create buffer (GPU buffer)
 		auto const bufferInfo = vk::BufferCreateInfo()
@@ -38,12 +38,12 @@ namespace vm {
 		//binding memory with buffer
 		errCheck(device.bindBufferMemory(buffer, bufferMemory, 0));
 	}
-	void Helper::destroyBuffer(vk::Device &device, vk::Buffer &buffer, vk::DeviceMemory &bufferMemory)
+	void Helper::destroyBuffer(vk::Device &device, vk::Buffer &buffer, vk::DeviceMemory &bufferMemory) const
 	{
 		device.destroyBuffer(buffer);
 		device.freeMemory(bufferMemory);
 	}
-	void Helper::copyBuffer(vk::Device &device, vk::CommandPool &cmdPool, vk::Queue &queue, vk::Buffer *srcBuffer, vk::Buffer *dstBuffer, vk::DeviceSize *size)
+	void Helper::copyBuffer(vk::Device &device, vk::CommandPool &cmdPool, vk::Queue &queue, vk::Buffer *srcBuffer, vk::Buffer *dstBuffer, vk::DeviceSize *size) const
 	{
 		vk::CommandBuffer copyCmd;
 
@@ -71,7 +71,7 @@ namespace vm {
 
 		device.freeCommandBuffers(cmdPool, 1, &copyCmd);
 	}
-	void Helper::createImage(vk::PhysicalDevice gpu, vk::Device device, uint32_t width, uint32_t height, vk::Format format, vk::ImageTiling tiling, vk::ImageUsageFlags usage, vk::MemoryPropertyFlags properties, vk::Image & image, vk::DeviceMemory & imageMemory)
+	void Helper::createImage(vk::PhysicalDevice gpu, vk::Device device, uint32_t width, uint32_t height, vk::Format format, vk::ImageTiling tiling, vk::ImageUsageFlags usage, vk::MemoryPropertyFlags properties, vk::Image & image, vk::DeviceMemory & imageMemory) const
 	{
 		auto const imageInfo = vk::ImageCreateInfo()
 			.setImageType(vk::ImageType::e2D)
@@ -97,12 +97,12 @@ namespace vm {
 
 		errCheck(device.bindImageMemory(image, imageMemory, 0));
 	}
-	void Helper::destroyImage(vk::Device device, vk::Image image, vk::DeviceMemory bufferMemory)
+	void Helper::destroyImage(vk::Device device, vk::Image image, vk::DeviceMemory bufferMemory) const
 	{
 		device.destroyImage(image);
 		device.freeMemory(bufferMemory);
 	}
-	vk::CommandBuffer Helper::beginSingleCommandBuffer(vk::Device device, vk::CommandPool cmdPool)
+	vk::CommandBuffer Helper::beginSingleCommandBuffer(vk::Device device, vk::CommandPool cmdPool) const
 	{
 		auto const allocInfo = vk::CommandBufferAllocateInfo()
 			.setLevel(vk::CommandBufferLevel::ePrimary)
@@ -119,7 +119,7 @@ namespace vm {
 
 		return commandBuffer;
 	}
-	void Helper::endSingleCommandBuffer(vk::Device device, vk::CommandPool cmdPool, vk::Queue queue, vk::CommandBuffer commandBuffer)
+	void Helper::endSingleCommandBuffer(vk::Device device, vk::CommandPool cmdPool, vk::Queue queue, vk::CommandBuffer commandBuffer) const
 	{
 		errCheck(commandBuffer.end());
 
@@ -132,9 +132,9 @@ namespace vm {
 
 		device.freeCommandBuffers(cmdPool, 1, &commandBuffer);
 	}
-	void Helper::copyImage(vk::Device device, vk::CommandPool cmdPool, vk::Queue queue, vk::Image srcImage, vk::Image dstImage, uint32_t width, uint32_t height)
+	void Helper::copyImage(vk::Device device, vk::CommandPool cmdPool, vk::Queue queue, vk::Image srcImage, vk::Image dstImage, uint32_t width, uint32_t height) const
 	{
-		vk::CommandBuffer commandBuffer = Helper::beginSingleCommandBuffer(device, cmdPool);
+		vk::CommandBuffer commandBuffer = beginSingleCommandBuffer(device, cmdPool);
 
 		auto const subResource = vk::ImageSubresourceLayers()
 			.setAspectMask(vk::ImageAspectFlagBits::eColor)
@@ -151,13 +151,13 @@ namespace vm {
 		commandBuffer.copyImage(srcImage, vk::ImageLayout::eTransferSrcOptimal,
 			dstImage, vk::ImageLayout::eTransferDstOptimal, 1, &region);
 
-		Helper::endSingleCommandBuffer(device, cmdPool, queue, commandBuffer);
+		endSingleCommandBuffer(device, cmdPool, queue, commandBuffer);
 	}
-	bool Helper::hasStencilCompoment(vk::Format format)
+	bool Helper::hasStencilCompoment(vk::Format format) const
 	{
 		return format == vk::Format::eD32SfloatS8Uint || format == vk::Format::eD24UnormS8Uint;
 	}
-	void Helper::transitionImageLayout(vk::Device device, vk::CommandPool cmdPool, vk::Queue queue, vk::Image image, vk::ImageLayout oldLayout, vk::ImageLayout newLayout, vk::Format format)
+	void Helper::transitionImageLayout(vk::Device device, vk::CommandPool cmdPool, vk::Queue queue, vk::Image image, vk::ImageLayout oldLayout, vk::ImageLayout newLayout, vk::Format format) const
 	{
 		vk::CommandBuffer commandBuffer = beginSingleCommandBuffer(device, cmdPool);
 
@@ -206,9 +206,9 @@ namespace vm {
 			0, nullptr,
 			1, &barrier);
 
-		Helper::endSingleCommandBuffer(device, cmdPool, queue, commandBuffer);
+		endSingleCommandBuffer(device, cmdPool, queue, commandBuffer);
 	}
-	void Helper::createImageView(vk::Device device, vk::Image image, vk::Format format, vk::ImageView &imageView, vk::ImageAspectFlags aspectFlags)
+	void Helper::createImageView(vk::Device device, vk::Image image, vk::Format format, vk::ImageView &imageView, vk::ImageAspectFlags aspectFlags) const
 	{
 		auto const viewInfo = vk::ImageViewCreateInfo()
 			.setImage(image)
@@ -218,11 +218,11 @@ namespace vm {
 
 		errCheck(device.createImageView(&viewInfo, nullptr, &imageView));
 	}
-	void Helper::copyBufferToImage(vk::Device device, vk::CommandPool cmdPool, vk::Queue queue, vk::Buffer buffer, vk::Image image, uint32_t width, uint32_t height)
+	void Helper::copyBufferToImage(vk::Device device, vk::CommandPool cmdPool, vk::Queue queue, vk::Buffer buffer, vk::Image image, int x, int y, int width, int height) const
 	{
-		vk::CommandBuffer commandBuffer = Helper::beginSingleCommandBuffer(device, cmdPool);
+		vk::CommandBuffer commandBuffer = beginSingleCommandBuffer(device, cmdPool);
 
-		vk::BufferImageCopy region = {};
+		vk::BufferImageCopy region;
 		region.bufferOffset = 0;
 		region.bufferRowLength = 0;
 		region.bufferImageHeight = 0;
@@ -230,18 +230,14 @@ namespace vm {
 		region.imageSubresource.mipLevel = 0;
 		region.imageSubresource.baseArrayLayer = 0;
 		region.imageSubresource.layerCount = 1;
-		region.imageOffset = { 0, 0, 0 };
-		region.imageExtent = {
-			width,
-			height,
-			1
-		};
+		region.imageOffset = { x, y, 0 };
+		region.imageExtent = { static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1 };
 
 		commandBuffer.copyBufferToImage(buffer, image, vk::ImageLayout::eTransferDstOptimal, 1, &region);
 
-		Helper::endSingleCommandBuffer(device, cmdPool, queue, commandBuffer);
+		endSingleCommandBuffer(device, cmdPool, queue, commandBuffer);
 	}
-	vk::Format Helper::findSupportedFormat(vk::PhysicalDevice gpu, const std::vector<vk::Format>& candidates, vk::ImageTiling tiling, vk::FormatFeatureFlags features)
+	vk::Format Helper::findSupportedFormat(vk::PhysicalDevice gpu, const std::vector<vk::Format>& candidates, vk::ImageTiling tiling, vk::FormatFeatureFlags features) const
 	{
 		for (auto format : candidates) {
 			vk::FormatProperties props = gpu.getFormatProperties(format);
@@ -257,7 +253,7 @@ namespace vm {
 	}
 	vk::Format Helper::findDepthFormat(vk::PhysicalDevice gpu)
 	{
-		return Helper::findSupportedFormat(gpu,
+		return findSupportedFormat(gpu,
 			{ vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint },
 			vk::ImageTiling::eOptimal,
 			vk::FormatFeatureFlagBits::eDepthStencilAttachment);

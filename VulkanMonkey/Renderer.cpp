@@ -298,9 +298,11 @@ namespace vm {
 	void Renderer::destroyTextures()
 	{
 		ResourceManager &rm = ResourceManager::getInstance();
-		for (auto &x : rm.textures) {
-			helper.destroyImage(device, x.second.image, x.second.imageMem);
-			device.destroyImageView(x.second.imageView);
+		for (auto &s : Sprite::sprites) {
+			for (auto &t : s->textures) {
+				helper.destroyImage(device,t.image, t.imageMem);
+				device.destroyImageView(t.imageView);
+			}
 		}
 		device.destroySampler(rm.spriteSampler);
 	}
@@ -339,7 +341,7 @@ namespace vm {
 		createCommandBuffers();		// swapchain image update
 		recordSimultaneousUseCommandBuffers();
 	}
-	std::string Renderer::getGpuName()
+	std::string Renderer::getGpuName() const
 	{
 		return gpuProperties.deviceName;
 	}
@@ -621,12 +623,12 @@ namespace vm {
 		// for mvp uniform
 		descriptorPoolSizes.push_back(vk::DescriptorPoolSize()
 			.setType(vk::DescriptorType::eUniformBufferDynamic)				//descriptor type
-			.setDescriptorCount((uint32_t)Sprite::sprites.size() + 2));		//descriptor count
+			.setDescriptorCount((uint32_t)Sprite::sprites.size() + 50));		//descriptor count
 
 		// for texture
 		descriptorPoolSizes.push_back(vk::DescriptorPoolSize()
 			.setType(vk::DescriptorType::eCombinedImageSampler)				//descriptor type
-			.setDescriptorCount((uint32_t)Sprite::sprites.size() + 2));		//descriptor count
+			.setDescriptorCount((uint32_t)Sprite::sprites.size() + 50));		//descriptor count
 
 		// for pointLights
 		descriptorPoolSizes.push_back(vk::DescriptorPoolSize()
@@ -641,7 +643,7 @@ namespace vm {
 		auto const createInfo = vk::DescriptorPoolCreateInfo()
 			.setPoolSizeCount((uint32_t)descriptorPoolSizes.size())
 			.setPPoolSizes(descriptorPoolSizes.data())
-			.setMaxSets((uint32_t)Sprite::sprites.size() + 6);
+			.setMaxSets((uint32_t)Sprite::sprites.size() + 50);
 
 		errCheck(device.createDescriptorPool(&createInfo, nullptr, &descriptorPool));
 	}
@@ -654,7 +656,7 @@ namespace vm {
 		mainCamera.createDescriptorSet(descriptorPool);
 
 		for (auto &s : Sprite::sprites) 
-			s->createDescriptorSet(descriptorPool, s->texture);
+			s->createDescriptorSets(descriptorPool);
 
 		PointLight::createDescriptorSet(descriptorPool);
 
@@ -1167,10 +1169,10 @@ namespace vm {
 						if (!s) continue;
 
 						// bind descriptor sets
-						const vk::DescriptorSet dSets[] = { s->descriptorSet, mainCamera.getDescriptorSet(), PointLight::descriptorSet };
+						const vk::DescriptorSet dSets[] = { *s->descriptorSet, mainCamera.getDescriptorSet(), PointLight::descriptorSet };
 						const uint32_t dOffsets[] = { static_cast<uint32_t>(s->uBuffInfo.offset), 0, 0 };
-						commandBuffers[i].bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
-							pipelineLayout, 0, 3, dSets, 1, dOffsets);
+
+						commandBuffers[i].bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout, 0, 3, dSets, 1, dOffsets);
 
 						//drawing indexed
 						commandBuffers[i].drawIndexed(6, 1, 0, s->getSpriteID() * 4, 0); // 6 indices for every 4 vertices in vBuffer (1 rect)
@@ -1233,10 +1235,10 @@ namespace vm {
 						continue;
 
 					// bind descriptor sets
-					const vk::DescriptorSet dSets[] = { entity->getSprite().descriptorSet, mainCamera.getDescriptorSet(), PointLight::descriptorSet };
+					const vk::DescriptorSet dSets[] = { *entity->getSprite().descriptorSet, mainCamera.getDescriptorSet(), PointLight::descriptorSet };
 					const uint32_t dOffsets[] = { static_cast<uint32_t>(entity->getSprite().uBuffInfo.offset), 0, 0 };
-					dynamicCmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
-						pipelineLayout, 0, 3, dSets, 1, dOffsets);
+
+					dynamicCmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout, 0, 3, dSets, 1, dOffsets);
 
 					//drawing indexed
 					dynamicCmdBuffer.drawIndexed(6, 1, 0, entity->getSprite().getSpriteID() * 4, 0); // 6 indices for every 4 vertices in vBuffer (1 rect)

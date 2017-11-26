@@ -50,7 +50,7 @@ namespace vm {
 		void reInitSwapchain();
 
 		//get gpu name
-		std::string getGpuName();
+		std::string getGpuName() const;
 
 		vk::Extent2D swapchainExtent;
 

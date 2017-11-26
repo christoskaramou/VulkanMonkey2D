@@ -36,7 +36,7 @@ namespace vm {
 		this->depth = depth;
 	}
 
-	float Entity::getDepth()
+	float Entity::getDepth() const
 	{
 		return depth;
 	}
@@ -47,7 +47,7 @@ namespace vm {
 		model = glm::translate(glm::mat4(), glm::vec3(transform.p.x * M2P, transform.p.y * M2P, depth));
 		model = glm::rotate(model, angle, glm::vec3(0.0f, 0.0f, 1.0f));
 	}
-	float Entity::getAngle()
+	float Entity::getAngle() const
 	{
 		return angle;
 	}
@@ -55,7 +55,7 @@ namespace vm {
 	{
 		this->timeScale = timeScale;
 	}
-	double Entity::getTimeScale()
+	double Entity::getTimeScale() const
 	{
 		return timeScale;
 	}
@@ -104,11 +104,11 @@ namespace vm {
 	{
 			return *sprite;
 	}
-	bool Entity::hasBody()
+	bool Entity::hasBody() const
 	{
 		return body != nullptr;
 	}
-	bool Entity::hasSprite()
+	bool Entity::hasSprite() const
 	{
 		return sprite != nullptr;
 	}

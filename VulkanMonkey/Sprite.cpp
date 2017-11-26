@@ -1,9 +1,12 @@
 #include "Sprite.h"
 #include "ErrorAndLog.h"
+#include <cstdarg>
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb-master/stb_image.h>
 
 namespace vm {
 	std::vector<Sprite*> Sprite::sprites{};
-	Sprite::Sprite(Rect definedRect, std::string textureName)
+	Sprite::Sprite(Rect _rect, std::vector<std::string> imagePathNames)
 	{
 		ResourceManager &rm = ResourceManager::getInstance();
 		static unsigned int spriteNumber = 0;		// every sprite has a unique ID
@@ -29,16 +32,16 @@ namespace vm {
 
 		type = SpriteType::userDefinedRect;
 
-		if (!definedRect) {
+		if (!_rect) {
 			LOG("define a rect for buffer assignment\n");
 			exit(-1);
 		}
 
 		float x, y, w, h;
-		x = definedRect.pos.x;
-		y = definedRect.pos.y;
-		w = definedRect.size.x;
-		h = definedRect.size.y;
+		x = _rect.pos.x;
+		y = _rect.pos.y;
+		w = _rect.size.x;
+		h = _rect.size.y;
 		vertices = {
 			{ { -w, -h, 0.0f },{ 1.0f, 0.0f, 0.0f },{ 0.0f, 1.0f } },
 			{ {  w, -h, 0.0f },{ 0.0f, 1.0f, 0.0f },{ 1.0f, 1.0f } },
@@ -46,15 +49,15 @@ namespace vm {
 			{ { -w,  h, 0.0f },{ 1.0f, 1.0f, 1.0f },{ 0.0f, 0.0f } }
 		};
 		indices = { 0, 1, 2, 2, 3, 0 };
-		rect = definedRect;
-		if (textureName == "")
-			setTexture("textures/default.jpg"); // this also checks if the Texture exists
-		else
-			setTexture(textureName);
+		rect = _rect;
+
+		setTextures(imagePathNames);
+
+		descriptorSet = nullptr;
 
 		Sprite::sprites.push_back(this);
 	}
-	Rect Sprite::getRect()
+	Rect Sprite::getRect() const
 	{
 		return rect;
 	}
@@ -70,6 +73,37 @@ namespace vm {
 	{ 
 		return spriteID;
 	}
+	void Sprite::setActiveDescriptorSet(unsigned int num)
+	{
+		if (num < descriptorSets.size())
+			descriptorSet = &descriptorSets[num];
+	}
+	void Sprite::acquireNextImage(uint32_t start, uint32_t end)
+	{
+		if (descriptorSets.size() <= 1) return;
+
+		static uint32_t num = start;
+		if (start < end) {
+			if (num + 1 <= end) {
+				descriptorSet = &descriptorSets[num + 1];
+			}
+			else {
+				num = start;
+				descriptorSet = &descriptorSets[start];
+			}
+			num++;
+		}
+		else {
+			if (num - 1 >= end) {
+				descriptorSet = &descriptorSets[num - 1];
+			}
+			else {
+				num = start;
+				descriptorSet = &descriptorSets[start];
+			}
+			num--;
+		}
+	}
 	void Sprite::setPointerToUniformBufferMem(vk::DeviceMemory& uniformBufferMem)
 	{
 		ResourceManager &rm = ResourceManager::getInstance();
@@ -78,10 +112,22 @@ namespace vm {
 		rm.getDevice().unmapMemory(uniformBufferMem);
 	}
 
-	void Sprite::setTexture(std::string path) // it will only work before descriptorSet is defined!!
+	void Sprite::setTextures(const std::vector<std::string>& imagePathNames)
 	{
-		ResourceManager &rm = ResourceManager::getInstance();
-		texture = rm.createNewTexture(path);
+		textures.clear();
+		for (auto &path : imagePathNames) {
+			if (path == "")
+				textures.push_back(createNewTexture("textures/default.jpg"));
+			else
+				textures.push_back(createNewTexture(path));
+		}
+	}
+
+	void Sprite::setTextures(const std::vector<Texture>& _textures)
+	{
+		textures.clear();
+		for (auto &t : textures) 
+			textures.push_back(t);
 	}
 
 	void Sprite::setModelPos(glm::mat4 modelPos)
@@ -132,41 +178,99 @@ namespace vm {
 		}
 		needsUpdate = false;
 	}
-	void Sprite::createDescriptorSet(const vk::DescriptorPool &descriptorPool, const Texture &texture)
+	void Sprite::createDescriptorSets(const vk::DescriptorPool &descriptorPool)
+	{
+		// clear the dSets
+		descriptorSets.clear();
+
+		for (auto &t : textures) {
+			// push a new dSet in vector
+			descriptorSets.push_back(vk::DescriptorSet());
+
+			ResourceManager &rm = ResourceManager::getInstance();
+			if (!rm.spritesUniformBuffer) exit(-1);
+
+			auto const allocateInfo = vk::DescriptorSetAllocateInfo()
+				.setDescriptorPool(descriptorPool)
+				.setDescriptorSetCount(1)
+				.setPSetLayouts(&rm.spritesDescriptorSetLayout);
+			errCheck(rm.getDevice().allocateDescriptorSets(&allocateInfo, &descriptorSets.back()));
+
+			vk::WriteDescriptorSet writeDset[2];
+			//----------for mvp-----------
+			writeDset[0] = vk::WriteDescriptorSet()
+				.setDstSet(descriptorSets.back())										//descriptor set
+				.setDstBinding(0)												//binding number in shader
+				.setDstArrayElement(0)											//start element in array
+				.setDescriptorType(vk::DescriptorType::eUniformBufferDynamic)	//descriptor type
+				.setDescriptorCount(1)											//descriptor count
+				.setPBufferInfo(&vk::DescriptorBufferInfo()
+					.setBuffer(rm.spritesUniformBuffer)								//buffer
+					.setOffset(0)													//buffer offset
+					.setRange(uBuffInfo.size));										//buffer size	
+			//----------for textures-------
+			writeDset[1] = vk::WriteDescriptorSet()
+				.setDstSet(descriptorSets.back())										//descriptor set
+				.setDstBinding(1)												//binding number in shader
+				.setDstArrayElement(0)											//start element in array
+				.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)	//descriptor type
+				.setDescriptorCount(1)											//descriptor count
+				.setPImageInfo(&vk::DescriptorImageInfo()
+					.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
+					.setImageView(t.imageView)
+					.setSampler(rm.spriteSampler));
+			// update DescriptorSets
+			rm.getDevice().updateDescriptorSets(2, writeDset, 0, nullptr);
+		}
+		descriptorSet = &descriptorSets.back();
+	}
+
+	Texture Sprite::createNewTexture(std::string imagePath)
 	{
 		ResourceManager &rm = ResourceManager::getInstance();
-		if (!rm.spritesUniformBuffer) exit(-1);
 
-		auto const allocateInfo = vk::DescriptorSetAllocateInfo()
-			.setDescriptorPool(descriptorPool)
-			.setDescriptorSetCount(1)
-			.setPSetLayouts(&rm.spritesDescriptorSetLayout);
-		errCheck(rm.getDevice().allocateDescriptorSets(&allocateInfo, &descriptorSet));
+		// this boosts the loading time and the memory usage if there are multiple same textures
+		if (rm.textures.find(imagePath) != rm.textures.end()) {
+			return rm.textures[imagePath];
+		}
+		else rm.textures[imagePath] = Texture();
 
-		vk::WriteDescriptorSet writeDset[2];
-		//----------for mvp-----------
-		writeDset[0] = vk::WriteDescriptorSet()
-			.setDstSet(descriptorSet)										//descriptor set
-			.setDstBinding(0)												//binding number in shader
-			.setDstArrayElement(0)											//start element in array
-			.setDescriptorType(vk::DescriptorType::eUniformBufferDynamic)	//descriptor type
-			.setDescriptorCount(1)											//descriptor count
-			.setPBufferInfo(&vk::DescriptorBufferInfo()
-				.setBuffer(rm.spritesUniformBuffer)								//buffer
-				.setOffset(0)													//buffer offset
-				.setRange(uBuffInfo.size));										//buffer size	
-		//----------for textures-------
-		writeDset[1] = vk::WriteDescriptorSet()
-			.setDstSet(descriptorSet)										//descriptor set
-			.setDstBinding(1)												//binding number in shader
-			.setDstArrayElement(0)											//start element in array
-			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)	//descriptor type
-			.setDescriptorCount(1)											//descriptor count
-			.setPImageInfo(&vk::DescriptorImageInfo()
-				.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
-				.setImageView(texture.imageView)
-				.setSampler(rm.spriteSampler));
-		// update DescriptorSets
-		rm.getDevice().updateDescriptorSets(2, writeDset, 0, nullptr);
+		Texture &tex = rm.textures[imagePath];
+		tex.name = imagePath;
+
+		int texWidth, texHeight, texChannels;
+		stbi_set_flip_vertically_on_load(true);
+		stbi_uc* pixels = stbi_load(imagePath.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+		vk::DeviceSize imageSize = texWidth * texHeight * 4;
+
+		if (!pixels) {
+			throw std::runtime_error("failed to load texture image!");
+		}
+
+		vk::Buffer stagingBuffer;
+		vk::DeviceMemory stagingBufferMemory;
+		helper.createBuffer(rm.getGpu(), rm.getDevice(), imageSize, vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent, stagingBuffer, stagingBufferMemory);
+
+		void* data;
+		vkMapMemory(rm.getDevice(), stagingBufferMemory, 0, imageSize, 0, &data);
+		memcpy(data, pixels, static_cast<size_t>(imageSize));
+		vkUnmapMemory(rm.getDevice(), stagingBufferMemory);
+
+		stbi_image_free(pixels);
+
+		helper.createImage(rm.getGpu(), rm.getDevice(), texWidth, texHeight, vk::Format::eR8G8B8A8Unorm, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
+			vk::MemoryPropertyFlagBits::eDeviceLocal, tex.image, tex.imageMem);
+
+		helper.transitionImageLayout(rm.getDevice(), rm.getCommandPool(), rm.getGraphicsQueue(), tex.image, vk::ImageLayout::ePreinitialized, vk::ImageLayout::eTransferDstOptimal);
+		helper.copyBufferToImage(rm.getDevice(), rm.getCommandPool(), rm.getGraphicsQueue(), stagingBuffer, tex.image, 0, 0, texWidth, texHeight);
+		helper.transitionImageLayout(rm.getDevice(), rm.getCommandPool(), rm.getGraphicsQueue(), tex.image, vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eShaderReadOnlyOptimal);
+
+		rm.getDevice().destroyBuffer(stagingBuffer);
+		rm.getDevice().freeMemory(stagingBufferMemory);
+
+		// create texture image view ------------------------------------
+		helper.createImageView(rm.getDevice(), tex.image, vk::Format::eR8G8B8A8Unorm, tex.imageView);
+
+		return tex;
 	}
 }

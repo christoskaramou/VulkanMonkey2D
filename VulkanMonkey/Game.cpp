@@ -99,7 +99,7 @@ namespace vm {
 	{
 	}
 
-	float vm::Game::calculateFPS()
+	float vm::Game::calculateFPS() const
 	{
 		static const int SAMPLES = 20;
 		static float frameTimes[SAMPLES];
@@ -129,7 +129,7 @@ namespace vm {
 			return 1.0f;
 
 	}
-	double Game::getDelta()
+	double Game::getDelta() const
 	{
 		return delta;
 	}
@@ -137,7 +137,7 @@ namespace vm {
 	{
 		this->timeScale = timeScale;
 	}
-	double Game::getTimeScale()
+	double Game::getTimeScale() const
 	{
 		return timeScale;
 	}
@@ -154,15 +154,15 @@ namespace vm {
 	{
 		return window;
 	}
-	void Game::setAmbientColor(glm::vec4 color)
+	void Game::setAmbientColor(glm::vec4 color) const
 	{
 		AmbientLight::color = color;
 	}
-	void Game::physics2D_Step(double delta)
+	void Game::physics2D_Step(double delta) const
 	{
 		ResourceManager::getInstance().world->Step(static_cast<float>(delta), 8, 3);
 	}
-	unsigned int Game::getMaxFps()
+	unsigned int Game::getMaxFps() const
 	{
 		return limitedFps;
 	}

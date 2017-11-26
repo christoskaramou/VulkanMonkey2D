@@ -2,8 +2,8 @@
 #include "Renderer.h"
 #include <string>
 #define GLFW_INCLUDE_VULKAN
-#include <GLFW\glfw3.h>
-#include <GLFW\glfw3native.h>
+#include <GLFW/glfw3.h>
+#include <GLFW/glfw3native.h>
 
 #define RELEASE					GLFW_RELEASE             
 
@@ -183,20 +183,20 @@ namespace vm {
 		Window();
 		~Window();
 
-		void createWindow(int width, int height, std::string title = "", GLFWmonitor *monitor = nullptr, GLFWwindow *share = nullptr); /*glfwGetPrimaryMonitor()*/
-		Renderer& getRenderer();
-		void setWindowUserPointer(void *pointer);
-		void* getWindowUserPointer();
-		void setWindowSizeCallback(GLFWwindowsizefun callback);
-		void setKeyCallback(GLFWkeyfun callback);
-		void setScrollCallback(GLFWscrollfun callback);
-		void windowHint(int hint, int value);
-		GLFWwindow* getWindow();
-		bool shouldClose();
-		void setWindowShouldClose(int value);
-		void setWindowTitle(std::string title);
-		void pollEvents();
-		bool getKey(int key);
+		void createWindow(int width, int height, std::string title = "", bool fullscreen = false); /*glfwGetPrimaryMonitor()*/
+		Renderer& getRenderer() const;
+		void setWindowUserPointer(void *pointer) const;
+		void* getWindowUserPointer() const;
+		void setWindowSizeCallback(GLFWwindowsizefun callback) const;
+		void setKeyCallback(GLFWkeyfun callback) const;
+		void setScrollCallback(GLFWscrollfun callback) const;
+		void windowHint(int hint, int value) const;
+		GLFWwindow* getWindow() const;
+		bool shouldClose() const;
+		void setWindowShouldClose(int value) const;
+		void setWindowTitle(std::string title) const;
+		void pollEvents() const;
+		bool getKey(int key) const;
 	private:
 		GLFWwindow *window;
 		int width;

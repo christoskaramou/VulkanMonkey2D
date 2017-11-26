@@ -76,7 +76,7 @@ namespace vm {
 			position = glm::vec3(0.0f, 0.0f, 0.9f);
 			lookVector = glm::vec3(0.0f);
 			upVector = glm::vec3(0.0f, 1.0f, 0.0f);
-			zoom = 0.7f;
+			zoom = 1.1f;
 			attachedMat = nullptr;
 			UCBO = {
 				glm::ortho(-(float)screenWidth * zoom, (float)screenWidth * zoom, (float)screenHeight * zoom, -(float)screenHeight * zoom, -1.0f, 1.0f),

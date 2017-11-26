@@ -54,12 +54,11 @@ namespace vm {
 		void setUpSpriteDescriptorSetLayout();
 		void setUpPointLightsDescriptorSetLayout();
 		
-		Texture& createNewTexture(std::string name);
 		int createUserDefinedBuffers(Rect &definedRect, bool reverseY = false);
 		void init(vk::PhysicalDevice& pGpu, vk::Device& pDevice, vk::CommandPool& pCommandPool, vk::Queue& pGraphicsQueue, vk::PhysicalDeviceProperties& pGpuProperties, vk::Extent2D& pSChainExt2D);
 		void deInit();
 
-		std::vector<Rect> getRectsFromImage(std::string location, bool flip_vertically_on_load = true);
+		//std::vector<Rect> getRectsFromImage(std::string location, bool flip_vertically_on_load = true) const;
 
 		vk::PhysicalDevice& getGpu();
 		vk::Device& getDevice();

@@ -1,6 +1,6 @@
 #pragma once
 #include "Sprite.h"
-#include "Box2D\Box2D.h"
+#include "include/Box2D/Box2D.h"
 #define M2P 60.0f
 #define P2M 1/M2P
 
@@ -31,15 +31,15 @@ namespace vm {
 		void addBoxShape(float width, float height);
 		void addCircleShape(float radius, float localX = 0.f, float localY = 0.f);
 
-		bool hasBody();
-		bool hasSprite();
+		bool hasBody() const;
+		bool hasSprite() const;
 		void setDepth(const float depth);
-		float getDepth();
+		float getDepth() const;
 		void setTransform(const b2Transform& transform);
-		float getAngle();
+		float getAngle() const;
 
 		void setTimeScale(double timeScale);
-		double getTimeScale();
+		double getTimeScale() const;
 		
 
 		void setSprite(Sprite* sp);

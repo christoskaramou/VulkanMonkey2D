@@ -1,7 +1,7 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 
-#define lightCount 10
+#define lightCount 20
 
 struct UniformLight{
 	vec4 color;
@@ -26,10 +26,15 @@ layout(location = 0) out vec4 outColor;
 
 void main() {
 	
-	float distance = length(light.pointLight[0].position - inPos.xy) / light.pointLight[0].radius;
+	float factor = 0.0;
 
-	float factor = 1/(distance*distance);
-
-	outColor = texture(texSampler, inUV) * vec4(ambient.color.xyz, 1.0f) * ambient.color.w;
-	outColor.w *= clamp(factor, 0.01, 1.0);
+	for(int i=0; i<lightCount; i++){
+		if (light.pointLight[i].on == 1.0){
+			float distance = length(light.pointLight[i].position - inPos.xy) / light.pointLight[i].radius;
+			factor += clamp(1/(distance*distance), 0.0, 1.0) * light.pointLight[i].color.w;
+		}
+	}
+	outColor = texture(texSampler, inUV);
+	outColor = vec4(outColor.xyz + ambient.color.xyz, outColor.w);
+	outColor.w *= clamp(ambient.color.w + factor, 0.0, 1.0);
 }

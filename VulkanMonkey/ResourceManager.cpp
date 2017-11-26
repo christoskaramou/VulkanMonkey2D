@@ -1,11 +1,7 @@
 #include "ResourceManager.h"
 #include "ErrorAndLog.h"
 
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
-
 #define MAX_SHAPED_BUFFERS 120
-#define DOWNSCALE_CONST 20.0f
 
 namespace vm {
 	vk::PhysicalDevice& ResourceManager::getGpu() { return pGpu; }
@@ -76,57 +72,6 @@ namespace vm {
 		errCheck(pDevice.createDescriptorSetLayout(&pLightCreateInfo, nullptr, &pointLightsDescriptorSetLayout));
 	}
 
-	Texture& ResourceManager::createNewTexture(std::string path)
-	{
-		if (!resourceManagerInitialized) {
-			LOG("******Init resource manager first******\n");
-			exit(-1);
-		}
-		auto check = textures.find(path);
-		if (check != textures.end()) {
-			return check->second;			// if the same name of the texture is found in resources, associate the texture to this sprite object
-		}
-		else {
-			textures[path] = Texture();
-			textures[path].name = path;
-		}
-
-		int texWidth, texHeight, texChannels;
-		stbi_set_flip_vertically_on_load(true);
-		stbi_uc* pixels = stbi_load(path.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
-		vk::DeviceSize imageSize = texWidth * texHeight * 4;
-
-		if (!pixels) {
-			throw std::runtime_error("failed to load texture image!");
-		}
-
-		vk::Buffer stagingBuffer;
-		vk::DeviceMemory stagingBufferMemory;
-		helper.createBuffer(pGpu, pDevice, imageSize, vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent, stagingBuffer, stagingBufferMemory);
-
-		void* data;
-		vkMapMemory(pDevice, stagingBufferMemory, 0, imageSize, 0, &data);
-		memcpy(data, pixels, static_cast<size_t>(imageSize));
-		vkUnmapMemory(pDevice, stagingBufferMemory);
-
-		stbi_image_free(pixels);
-
-		helper.createImage(pGpu, pDevice, texWidth, texHeight, vk::Format::eR8G8B8A8Unorm, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
-			vk::MemoryPropertyFlagBits::eDeviceLocal, textures[path].image, textures[path].imageMem);
-
-		helper.transitionImageLayout(pDevice, pCommandPool, pGraphicsQueue, textures[path].image, vk::ImageLayout::ePreinitialized, vk::ImageLayout::eTransferDstOptimal);
-		helper.copyBufferToImage(pDevice, pCommandPool, pGraphicsQueue, stagingBuffer, textures[path].image, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
-		helper.transitionImageLayout(pDevice, pCommandPool, pGraphicsQueue, textures[path].image, vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eShaderReadOnlyOptimal);
-
-		pDevice.destroyBuffer(stagingBuffer);
-		pDevice.freeMemory(stagingBufferMemory);
-
-		// create texture image view ------------------------------------
-		helper.createImageView(pDevice, textures[path].image, vk::Format::eR8G8B8A8Unorm, textures[path].imageView);
-
-		return textures[path];
-	}
-
 	int ResourceManager::createUserDefinedBuffers(Rect &rect, bool reverseY) {
 		if (!resourceManagerInitialized) {
 			LOG("******Init resource manager first******\n");
@@ -186,8 +131,6 @@ namespace vm {
 		createSpriteSampler();
 
 		userShapedBuffers.resize(MAX_SHAPED_BUFFERS);
-
-		createNewTexture("textures/default.jpg");
 
 		// Box2D world and ground creation
 		world = new b2World(b2Vec2(0.0f, -5.f));
@@ -290,80 +233,80 @@ namespace vm {
 	}
 
 	//TODO needs rework!!!
-	std::vector<Rect> ResourceManager::getRectsFromImage(std::string location, bool flip_vertically_on_load)
-	{
-		struct rgb {
-			float r;
-			float g;
-			float b;
-			float a;
-		};
+	//std::vector<Rect> ResourceManager::getRectsFromImage(std::string location, bool flip_vertically_on_load) const
+	//{
+	//	struct rgb {
+	//		float r;
+	//		float g;
+	//		float b;
+	//		float a;
+	//	};
 
-		std::vector<Rect> rects;
-		std::vector<rgb> pixel;
+	//	std::vector<Rect> rects;
+	//	std::vector<rgb> pixel;
 
-		int width, height, c;
-		stbi_set_flip_vertically_on_load(flip_vertically_on_load);
-		auto data = stbi_loadf(location.c_str(), &width, &height, &c, 4);
-		if (!data) {
-			LOG("error loading image\n");
-			exit(-1);
-		}
-		int totalSize = width*height*c;
-		int pixels = width * height;
-		LOG("\n\nImage Total Size (pixels, width, height, chunksOf) = " << totalSize << " (" << pixels << ", " << width << ", " << height << ", " << c << ")\n");
-		pixel.resize(pixels);
-		for (auto i = 0; i < pixels; i++)
-		{
-			pixel[i].r = data[i * 4 + 0];
-			pixel[i].g = data[i * 4 + 1];
-			pixel[i].b = data[i * 4 + 2];
-			pixel[i].a = data[i * 4 + 3];
-		}
-		int xTemp = 0, yTemp = 0;
-		bool passProcess = false;
-		for (int i = 0; i < pixels; i++) {
-			if (pixel[i].a > 0) {
-				for (auto const &r : rects)
-				{
-					if ((xTemp >= r.pos.x && xTemp <= r.pos.x + r.size.x) && (yTemp >= r.pos.y && yTemp <= r.pos.y + r.size.y)) {
-						passProcess = true;
-						break;
-					}
-				}
-				if (!passProcess) {
-					int a = i;
-					do {
-						a++;
-					} while (pixel[a].a > 0); // TODO: revisit this
+	//	int width, height, c;
+	//	stbi_set_flip_vertically_on_load(flip_vertically_on_load);
+	//	auto data = stbi_loadf(location.c_str(), &width, &height, &c, 4);
+	//	if (!data) {
+	//		LOG("error loading image\n");
+	//		exit(-1);
+	//	}
+	//	int totalSize = width*height*c;
+	//	int pixels = width * height;
+	//	LOG("\n\nImage Total Size (pixels, width, height, chunksOf) = " << totalSize << " (" << pixels << ", " << width << ", " << height << ", " << c << ")\n");
+	//	pixel.resize(pixels);
+	//	for (auto i = 0; i < pixels; i++)
+	//	{
+	//		pixel[i].r = data[i * 4 + 0];
+	//		pixel[i].g = data[i * 4 + 1];
+	//		pixel[i].b = data[i * 4 + 2];
+	//		pixel[i].a = data[i * 4 + 3];
+	//	}
+	//	int xTemp = 0, yTemp = 0;
+	//	bool passProcess = false;
+	//	for (int i = 0; i < pixels; i++) {
+	//		if (pixel[i].a > 0) {
+	//			for (auto const &r : rects)
+	//			{
+	//				if ((xTemp >= r.pos.x && xTemp <= r.pos.x + r.size.x) && (yTemp >= r.pos.y && yTemp <= r.pos.y + r.size.y)) {
+	//					passProcess = true;
+	//					break;
+	//				}
+	//			}
+	//			if (!passProcess) {
+	//				int a = i;
+	//				do {
+	//					a++;
+	//				} while (pixel[a].a > 0); // TODO: revisit this
 
-					rects.push_back(Rect());
-					rects.back().pos.x = (float)xTemp;
-					rects.back().pos.y = (float)yTemp;
-					rects.back().size.x = (float)a - i;
-					a = i;
-					do {
-						a += width;
-					} while (pixel[a].a > 0);
+	//				rects.push_back(Rect());
+	//				rects.back().pos.x = (float)xTemp;
+	//				rects.back().pos.y = (float)yTemp;
+	//				rects.back().size.x = (float)a - i;
+	//				a = i;
+	//				do {
+	//					a += width;
+	//				} while (pixel[a].a > 0);
 
-					rects.back().size.y = (float)(a - i) / width;
-				}
-			}
-			if (xTemp < width - 1) {
-				xTemp++;
-			}
-			else {
-				xTemp = 0;
-				yTemp++;
-			}
-			passProcess = false;
-		}
-		for (auto &r : rects) {
-			static int i = -1;
-			i++;
-			LOG("Rect" << i << " (x = " << r.pos.x << ", y = " << r.pos.y << ", width = " << r.size.x << ", height = " << r.size.y << ")\n");
-		}
-		stbi_image_free(data);
-		return rects;
-	}
+	//				rects.back().size.y = (float)(a - i) / width;
+	//			}
+	//		}
+	//		if (xTemp < width - 1) {
+	//			xTemp++;
+	//		}
+	//		else {
+	//			xTemp = 0;
+	//			yTemp++;
+	//		}
+	//		passProcess = false;
+	//	}
+	//	for (auto &r : rects) {
+	//		static int i = -1;
+	//		i++;
+	//		LOG("Rect" << i << " (x = " << r.pos.x << ", y = " << r.pos.y << ", width = " << r.size.x << ", height = " << r.size.y << ")\n");
+	//	}
+	//	stbi_image_free(data);
+	//	return rects;
+	//}
 }

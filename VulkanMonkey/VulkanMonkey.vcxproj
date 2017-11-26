@@ -106,15 +106,15 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\Users\nikos\Desktop\CHRISTOS\assimp-3.1.1-win-binaries\include;C:\Users\nikos\Desktop\CHRISTOS\glfw-3.2.1.bin.WIN64\include;C:\Users\nikos\Desktop\CHRISTOS\tinyobjloader-master;C:\Users\nikos\Desktop\CHRISTOS\stb-master;C:\Users\nikos\Desktop\CHRISTOS\glm-0.9.8.4\glm;C:\Users\nikos\Desktop\CHRISTOS\VulkanTools-master\include;C:\Users\nikos\Desktop\CHRISTOS\VulkanTools-master\build;C:\Users\nikos\Desktop\CHRISTOS\VulkanTools-master\layers;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)include</AdditionalIncludeDirectories>
       <ControlFlowGuard>false</ControlFlowGuard>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <AssemblerListingLocation>Debug/</AssemblerListingLocation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>glfw3.lib;assimp.lib;C:\Users\nikos\Desktop\CHRISTOS\PROJECTS\gitRepos\Box2D\Box2D\Build\vs2017\bin\Debug\Box2D.lib;C:\Users\nikos\Desktop\CHRISTOS\VulkanTools-master\build\loader\Debug\vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>C:\Users\nikos\Desktop\CHRISTOS\glfw-3.2.1.bin.WIN64\lib-vc2015;C:\Users\nikos\Desktop\CHRISTOS\assimp-3.1.1-win-binaries\lib64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>$(ProjectDir)lib\glfw3.lib;$(ProjectDir)lib\debug\Box2D.lib;$(ProjectDir)lib\debug\vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <ProjectReference>
       <LinkLibraryDependencies>false</LinkLibraryDependencies>
@@ -145,16 +145,16 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\Users\nikos\Desktop\CHRISTOS\assimp-3.1.1-win-binaries\include;C:\Users\nikos\Desktop\CHRISTOS\glfw-3.2.1.bin.WIN64\include;C:\Users\nikos\Desktop\CHRISTOS\tinyobjloader-master;C:\Users\nikos\Desktop\CHRISTOS\stb-master;C:\Users\nikos\Desktop\CHRISTOS\glm-0.9.8.4\glm;C:\Users\nikos\Desktop\CHRISTOS\VulkanTools-master\include;C:\Users\nikos\Desktop\CHRISTOS\VulkanTools-master\build;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)include</AdditionalIncludeDirectories>
       <DebugInformationFormat>OldStyle</DebugInformationFormat>
       <EnablePREfast>false</EnablePREfast>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>glfw3.lib;assimp.lib;C:\Users\nikos\Desktop\CHRISTOS\PROJECTS\gitRepos\Box2D\Box2D\Build\vs2017\bin\Release\Box2D.lib;C:\Users\nikos\Desktop\CHRISTOS\VulkanTools-master\build\loader\Release\vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(ProjectDir)lib\glfw3.lib;$(ProjectDir)lib\release\Box2D.lib;$(ProjectDir)lib\release\vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>C:\Users\nikos\Desktop\CHRISTOS\glfw-3.2.1.bin.WIN64\lib-vc2015;C:\Users\nikos\Desktop\CHRISTOS\assimp-3.1.1-win-binaries\lib64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <SubSystem>Windows</SubSystem>
       <AdditionalOptions>/ENTRY:"mainCRTStartup" %(AdditionalOptions)</AdditionalOptions>
     </Link>

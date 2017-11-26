@@ -9,12 +9,13 @@ namespace vm {
 
 	Camera *camera;
 	Entity player;
+	Entity lightObj;
 	std::vector<Entity> objects;
 
 	void Game1::load()
 	{
 		// set up the window (renderer)
-		window.createWindow(1200, 800, "", nullptr, nullptr);
+		window.createWindow(1440, 960, "", false);
 		window.setWindowUserPointer(this); // pointer for callbacks usage
 		window.setWindowSizeCallback(windowResizedCallback);
 		window.setKeyCallback(keysCallback);
@@ -32,23 +33,24 @@ namespace vm {
 		// SCENE
 
 		// player
-		Rect rect{ b2Vec2(0, 0), b2Vec2(15, 20) };
-		player.setSprite(new Sprite(rect, "textures/stickman.png"));
+		Rect rect{ b2Vec2(0, 0), b2Vec2(30, 40) };
+		player.setSprite(new Sprite(rect, {
+			"textures/anim_01.png",  "textures/anim_02.png", "textures/anim_03.png", "textures/anim_04.png", "textures/anim_05.png", "textures/anim_06.png", "textures/anim_07.png", "textures/anim_08.png",
+			"textures/anim_09.png",  "textures/anim_10.png", "textures/anim_11.png", "textures/anim_12.png", "textures/anim_13.png", "textures/anim_14.png", "textures/anim_15.png", "textures/anim_16.png", }));
 		player.setDepth(0.12f); // front
 		player.createBody2D(rect.pos.x, rect.pos.y);
-		player.addBoxShape(rect.size.x, rect.size.y);
+		player.addBoxShape(rect.size.x*.8f, rect.size.y*.7f);
 		player.body->SetType(b2BodyType::b2_dynamicBody);
 		player.body->SetFixedRotation(true);
 		player.body->GetFixtureList()->SetRestitution(0.f);
 		player.body->SetGravityScale(0.f);
-		//player.body->
 
 		Rect rect1;
 		for (int i = 0; i < 100 * SCALE; i++) {
 			rect1 = { b2Vec2(x(gen), y(gen)), b2Vec2(w(gen), h(gen)) };
 			rect1.size.y = rect1.size.x;
 			objects.push_back(Entity());
-			objects.back().setSprite(new Sprite(rect1, "textures/sun.png"));
+			objects.back().setSprite(new Sprite(rect1, { "textures/sun.png" }));
 			objects.back().createBody2D(rect1.pos.x, rect1.pos.y);
 			objects.back().addCircleShape(rect1.size.x / 2.5f);
 			if (i % 2 == 0)
@@ -57,7 +59,7 @@ namespace vm {
 			rect1 = { b2Vec2(x(gen), y(gen)), b2Vec2(w(gen), h(gen)) };
 			rect1.size.y = rect1.size.x;
 			objects.push_back(Entity());
-			objects.back().setSprite(new Sprite(rect1, "textures/cd.png"));
+			objects.back().setSprite(new Sprite(rect1, { "textures/cd.png" }));
 			objects.back().createBody2D(rect1.pos.x, rect1.pos.y);
 			objects.back().addCircleShape(rect1.size.x);
 			if (i % 2 == 0)
@@ -66,7 +68,7 @@ namespace vm {
 			rect1 = { b2Vec2(x(gen), y(gen)), b2Vec2(w(gen), h(gen)) };
 			rect1.size.y = rect1.size.x;
 			objects.push_back(Entity());
-			objects.back().setSprite(new Sprite(rect1, "textures/circle.png"));
+			objects.back().setSprite(new Sprite(rect1, { "textures/circle.png" }));
 			objects.back().createBody2D(rect1.pos.x, rect1.pos.y);
 			objects.back().addCircleShape(rect1.size.x);
 			if (i % 2 == 0)
@@ -75,7 +77,7 @@ namespace vm {
 			rect1 = { b2Vec2(x(gen), y(gen)), b2Vec2(w(gen), h(gen)) };
 			rect1.size.y = rect1.size.x;
 			objects.push_back(Entity());
-			objects.back().setSprite(new Sprite(rect1, "textures/circle-maze.png"));
+			objects.back().setSprite(new Sprite(rect1, { "textures/circle-maze.png" }));
 			objects.back().createBody2D(rect1.pos.x, rect1.pos.y);
 			objects.back().addCircleShape(rect1.size.x);
 			if (i % 2 == 0)
@@ -83,11 +85,17 @@ namespace vm {
 
 			rect1 = { b2Vec2(x(gen), y(gen)), b2Vec2(w(gen), h(gen)) };
 			objects.push_back(Entity());
-			objects.back().setSprite(new Sprite(rect1, "textures/default.jpg"));
+			objects.back().setSprite(new Sprite(rect1));
 			objects.back().createBody2D(rect1.pos.x, rect1.pos.y);
 			objects.back().addBoxShape(rect1.size.x, rect1.size.y);
 			if (i % 2 == 0)
 				objects.back().body->SetGravityScale(-1.f);
+		}
+		for (auto &o : objects) {
+			if (o.getSprite().getSpriteID() % 2 == 0)
+				o.body->SetGravityScale(.01f);
+			else
+				o.body->SetGravityScale(-.01f);
 		}
 
 		// top
@@ -132,12 +140,25 @@ namespace vm {
 		objects.back().addBoxShape(rect1.size.x, rect1.size.y);
 		objects.back().body->SetType(b2BodyType::b2_kinematicBody);
 
-		PointLight &light = pointLight[0];
-		light.attachTo(player.getTranslationMat());
-		light.setRadius(100.f);
-		light.setColor({ 1.f, 0.3f, 1.f, 0.0f });
-		light.turnOn();
-		//AmbientLight::color = { 1.f, 1.f, 1.f, 0.5f };
+
+		PointLight &light1 = pointLight[1];
+		light1.attachTo(lightObj.getTranslationMat());
+		light1.setLightAlpha(.8f);
+		light1.setRadius(150.f);
+		light1.turnOn();
+
+		pointLight[0].attachTo(player.getTranslationMat());
+		pointLight[0].setLightAlpha(1.f);
+		pointLight[0].setRadius(100.f);
+		pointLight[0].turnOn();
+		for (int i = 2; i < MAX_POINT_LIGHTS; i++) {
+			pointLight[i].attachTo(objects[i*5].getTranslationMat());
+			pointLight[i].setLightAlpha(.6f);
+			pointLight[i].setRadius(20.f);
+			pointLight[i].turnOn();
+		}
+
+		AmbientLight::color = { .0f, 0.f, 0.f, .0f };
 	}
 
 	void Game1::init()
@@ -165,7 +186,15 @@ namespace vm {
 
 	void Game1::update(double delta)
 	{
-		pointLight[0].update();
+		static double move = 0.0;
+		move += delta;
+		b2Transform lt;
+		lt.p.x = static_cast<float>(cos(move) * 5.0);
+		lt.p.y = -abs(static_cast<float>(sin(move) * 5.0));
+		lightObj.setTransform(lt);
+		for (int i = 0; i < MAX_POINT_LIGHTS; i++)
+			pointLight[i].update();
+
 		for (auto &e : objects) {
 			if (e.hasBody()) 
 				e.setTransform(e.body->GetTransform());
@@ -182,26 +211,37 @@ namespace vm {
 	void Game1::draw()
 	{
 		Game::draw();
+		player.draw();
 		for (auto &e : objects) {
 			e.draw();
 		}
-
-		player.draw();
-
 		window.getRenderer().summit(true);
 	}
 
 	void Game1::checkInput(double delta)
 	{
+		static double time = 0.0;
 		float _delta = static_cast<float>(delta);
 		if (window.getKey(KEY_A)) {
-			if (gameState == GameState::Running)
+			if (gameState == GameState::Running) {
+				time += delta;
+				if (time > .1) {
+					player.getSprite().acquireNextImage(15, 8);
+					time = 0.0;
+				}
 				player.body->ApplyLinearImpulseToCenter(b2Vec2(-100.f*_delta, 0), true);
+			}
 		}
 
 		if (window.getKey(KEY_D)) {
-			if (gameState == GameState::Running)
+			if (gameState == GameState::Running) {
+				time += delta;
+				if (time > .1) {
+					player.getSprite().acquireNextImage(0, 7);
+					time = 0.0;
+				}
 				player.body->ApplyLinearImpulseToCenter(b2Vec2(100.f*_delta, 0), true);
+			}
 		}
 
 		if (window.getKey(KEY_W)) {

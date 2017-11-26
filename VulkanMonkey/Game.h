@@ -23,16 +23,16 @@ namespace vm {
 		virtual void checkInput(double delta);
 		virtual void draw();
 
-		float calculateFPS();
-		double getDelta();
+		float calculateFPS() const;
+		double getDelta() const;
 		void setTimeScale(double timeScale);
-		double getTimeScale();
-		unsigned int getMaxFps();
+		double getTimeScale() const;
+		unsigned int getMaxFps() const;
 		void setMaxFPS(unsigned int fps);
 		void setGameState(GameState state);
 		Window& getWindow();
-		void setAmbientColor(glm::vec4 color);
-		void physics2D_Step(double delta);
+		void setAmbientColor(glm::vec4 color) const;
+		void physics2D_Step(double delta) const;
 
 
 	protected:

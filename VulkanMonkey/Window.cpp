@@ -19,66 +19,68 @@ namespace vm {
 		window = nullptr;
 		delete renderer;
 	}
-	void Window::createWindow(int width, int height, std::string title, GLFWmonitor * monitor, GLFWwindow * share)
+	void Window::createWindow(int width, int height, std::string title, bool fullscreen)
 	{
 		if (!glfwInit()) exit(-1);
 		if (!glfwVulkanSupported()) exit(-1);
 		windowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
-		window = glfwCreateWindow(width, height, title.c_str(), monitor, share);
+		GLFWmonitor * monitor = fullscreen ? glfwGetPrimaryMonitor() : nullptr;
+
+		window = glfwCreateWindow(width, height, title.c_str(), monitor, nullptr);
 
 		renderer = new Renderer(getWindow());
 	}
 
-	Renderer& Window::getRenderer()
+	Renderer& Window::getRenderer() const
 	{
 		return *renderer;
 	}
-	void Window::setWindowUserPointer(void *pointer)
+	void Window::setWindowUserPointer(void *pointer) const
 	{
 		glfwSetWindowUserPointer(window, pointer);
 	}
-	void * Window::getWindowUserPointer()
+	void * Window::getWindowUserPointer() const
 	{
 		return glfwGetWindowUserPointer(window);
 	}
-	void Window::setWindowSizeCallback(GLFWwindowsizefun callback)
+	void Window::setWindowSizeCallback(GLFWwindowsizefun callback) const
 	{
 		glfwSetWindowSizeCallback(window, callback);
 	}
-	void Window::setKeyCallback(GLFWkeyfun callback)
+	void Window::setKeyCallback(GLFWkeyfun callback) const
 	{
 		glfwSetKeyCallback(window, callback);
 	}
-	void Window::setScrollCallback(GLFWscrollfun callback)
+	void Window::setScrollCallback(GLFWscrollfun callback) const
 	{
 		glfwSetScrollCallback(window, callback);
 	}
-	void Window::windowHint(int hint, int value)
+	void Window::windowHint(int hint, int value) const
 	{
 		glfwWindowHint(hint, value);
 	}
-	GLFWwindow * Window::getWindow()
+	GLFWwindow * Window::getWindow() const
 	{
 		return window;
 	}
-	bool Window::shouldClose()
+	bool Window::shouldClose() const
 	{
 		return glfwWindowShouldClose(window);
 	}
-	void Window::setWindowShouldClose(int value)
+	void Window::setWindowShouldClose(int value) const
 	{
 		glfwSetWindowShouldClose(window, value);
 	}
-	void Window::setWindowTitle(std::string title)
+	void Window::setWindowTitle(std::string title) const
 	{
 		glfwSetWindowTitle(window, title.c_str());
 	}
-	void Window::pollEvents()
+	void Window::pollEvents() const
 	{
 		glfwPollEvents();
 	}
-	bool Window::getKey(int key)
+	bool Window::getKey(int key) const
 	{
 		return glfwGetKey(window, key) == GLFW_PRESS;
 	}
