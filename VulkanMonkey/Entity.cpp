@@ -15,9 +15,6 @@ namespace vm {
 	}
 	Entity::~Entity()
 	{
-		body = nullptr;
-		sprite = nullptr;
-		timeScale = 1.f;
 	}
 	void Entity::update()
 	{

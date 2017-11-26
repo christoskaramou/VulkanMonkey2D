@@ -55,7 +55,6 @@ namespace vm {
 		vk::Extent2D swapchainExtent;
 
 		Helper helper;
-		std::vector<Sprite*> sprites{};
 
 		Camera mainCamera;
 		Camera* getMainCamera();
@@ -97,7 +96,7 @@ namespace vm {
 		vk::SurfaceFormatKHR surfaceFormatKHR;
 		vk::PresentModeKHR presentModeKHR;
 		//vk::Extent2D swapchainExtent;
-		uint32_t swapchainImageCount = 2; // reassigned either way later in createSwapchain()
+		uint32_t swapchainImageCount;
 		std::vector<vk::Image> swapchainImages{};
 		std::vector<vk::ImageView> swapchainImageViews{};
 		void createSwapchain();
@@ -106,16 +105,7 @@ namespace vm {
 		void destroyImageViews();
 
 		//textures
-		std::vector<vk::Image> textureImages{};
-		std::vector<vk::DeviceMemory> textureImageMems{};
-		std::vector<vk::ImageView> textureImageViews{};
-		std::vector<vk::Sampler> textureSamplers{};
-		void createTextures(std::vector<std::string> &pFile);
 		void destroyTextures();
-		void createTextureImageViews();
-		void destroyTextureImageViews();
-		void createTextureSamplers();
-		void destroyTextureSamplers();
 
 		// render pass
 		vk::RenderPass renderPass;
@@ -123,22 +113,10 @@ namespace vm {
 		void destroyRenderPass();
 
 		// buffers
-
-		vk::Buffer centerDotBuf;
-		vk::DeviceMemory centerDotBufMem;
-
 		std::vector<vk::Framebuffer> swapchainFrameBuffers{};	// frame buffers
-		std::vector<vk::Buffer> vertexBuffers{};				// vertex buffers
-		std::vector<vk::Buffer> indexBuffers{};					// index buffers
 		std::vector<vk::CommandBuffer> commandBuffers{};		// command buffers
 		vk::CommandBuffer dynamicCmdBuffer;						// one time summit command buffer
-		std::vector<vk::Buffer> uniformBuffers{};				// uniform buffers
-		std::vector<vk::Buffer> stagingUniformBuffers{};		// staging uniform bufer
 		vk::Image depthImage;									// depth image
-		std::vector<vk::DeviceMemory> vertexBufferMems{};
-		std::vector<vk::DeviceMemory> indexBufferMems{};
-		std::vector<vk::DeviceMemory> uniformBufferMems{};
-		std::vector<vk::DeviceMemory> stagingUniformBufferMems{};
 		vk::DeviceMemory depthImageMemory;
 		vk::ImageView depthImageView;
 		vk::CommandPool commandPool;
@@ -153,25 +131,18 @@ namespace vm {
 		void destroyCommandPool();
 		void recordOneTimeSubmitCommandBuffer(uint32_t imageIndex);
 		void recordSimultaneousUseCommandBuffers();
-		void createStagingUniformBuffers();
-		void destroyStagingUniformBuffers();
 		void createUniformBuffers();
 		void destroyUniformBuffers();
-		void initUniformBuffers();
-		void updateUniformBuffer(int obj);
 		void createDepthResources();
 		void destroyDepthResources();
 
 		// descriptors
-		std::vector<vk::DescriptorSetLayout> descriptorSetLayouts{};
 		vk::DescriptorPool descriptorPool;
-		std::vector<vk::DescriptorSet> descriptorSets{};
-		std::vector<vk::WriteDescriptorSet> writeDescriptorSets{};
 		void createDescriptorSetLayout();
 		void destroyDescriptorSetLayout();
 		void createDescriptorPool();
 		void destroyDescriptorPool();
-		void createDescriptorSet();
+		void createDescriptorSets();
 
 		// pipeline
 		vk::Pipeline pipeline;
@@ -192,10 +163,6 @@ namespace vm {
 		vk::Fence fence;
 		void createFence();
 		void destroyFence();
-
-		// sprite vertices and indices
-		std::vector<std::vector<Vertex>> vertices{};
-		std::vector<std::vector<uint32_t>> indices{};
 
 		std::vector<const char*> instanceLayers{};
 		std::vector<const char*> instanceExtensions{};

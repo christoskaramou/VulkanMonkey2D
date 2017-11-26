@@ -40,8 +40,6 @@ namespace vm {
 	Renderer::~Renderer()
 	{
 		device.waitIdle();
-		Sprite::sprites.clear();
-		PointLight::lightPool.clear();
 		destroySemaphores();
 
 		destroyDescriptorPool(); // Descriptor sets are destroyed when destroying the descriptor pool
@@ -292,31 +290,13 @@ namespace vm {
 		for (auto iView : swapchainImageViews)
 			device.destroyImageView(iView);
 	}
-	void Renderer::createTextures(std::vector<std::string> &pFile)
-	{
-	}
 	void Renderer::destroyTextures()
 	{
-		ResourceManager &rm = ResourceManager::getInstance();
-		for (auto &s : Sprite::sprites) {
-			for (auto &t : s->textures) {
-				helper.destroyImage(device,t.image, t.imageMem);
-				device.destroyImageView(t.imageView);
-			}
+		for (auto &t : ResourceManager::getInstance().textures) {
+			helper.destroyImage(device, t.second.image, t.second.imageMem);
+			device.destroyImageView(t.second.imageView);
 		}
-		device.destroySampler(rm.spriteSampler);
-	}
-	void Renderer::createTextureImageViews()
-	{
-	}
-	void Renderer::destroyTextureImageViews()
-	{
-	}
-	void Renderer::createTextureSamplers()
-	{
-	}
-	void Renderer::destroyTextureSamplers()
-	{
+		device.destroySampler(ResourceManager::getInstance().spriteSampler);
 	}
 	void Renderer::reInitSwapchain()
 	{
@@ -587,18 +567,6 @@ namespace vm {
 	{
 		device.destroyCommandPool(commandPool);
 	}
-	void Renderer::createStagingUniformBuffers()
-	{
-	}
-	void Renderer::destroyStagingUniformBuffers()
-	{
-	}
-	void Renderer::initUniformBuffers()
-	{
-	}
-	void Renderer::updateUniformBuffer(int obj)
-	{
-	}
 	void Renderer::createDepthResources()
 	{
 		vk::Format depthFormat = helper.findDepthFormat(gpu);
@@ -651,7 +619,7 @@ namespace vm {
 	{
 		device.destroyDescriptorPool(descriptorPool);
 	}
-	void Renderer::createDescriptorSet()
+	void Renderer::createDescriptorSets()
 	{
 		mainCamera.createDescriptorSet(descriptorPool);
 
@@ -663,19 +631,16 @@ namespace vm {
 	}
 	void Renderer::createDescriptorSetLayout()
 	{
-		// camera descriptionSetLayout
-		ResourceManager::getInstance().setUpCameraDescriptorSetLayout();
 
 		// sprite descriptionSetLayout
 		ResourceManager::getInstance().setUpSpriteDescriptorSetLayout();
-
+		// camera descriptionSetLayout
+		ResourceManager::getInstance().setUpCameraDescriptorSetLayout();
 		// point light descriptionSetLayout
 		ResourceManager::getInstance().setUpPointLightsDescriptorSetLayout();
 	}
 	void Renderer::destroyDescriptorSetLayout()
 	{
-		for (auto &ds : descriptorSetLayouts)
-			device.destroyDescriptorSetLayout(ds);
 		device.destroyDescriptorSetLayout(ResourceManager::getInstance().spritesDescriptorSetLayout);
 		device.destroyDescriptorSetLayout(ResourceManager::getInstance().cameraDescriptorSetLayout);
 		device.destroyDescriptorSetLayout(ResourceManager::getInstance().pointLightsDescriptorSetLayout);
@@ -802,8 +767,8 @@ namespace vm {
 
 		// Pipeline layout for passing uniform values to shaders
 		vk::DescriptorSetLayout descSetLayouts[] = {	ResourceManager::getInstance().spritesDescriptorSetLayout,
-														ResourceManager::getInstance().pointLightsDescriptorSetLayout,
-														ResourceManager::getInstance().cameraDescriptorSetLayout };
+														ResourceManager::getInstance().cameraDescriptorSetLayout,
+														ResourceManager::getInstance().pointLightsDescriptorSetLayout };
 
 		// Define push constant
 		auto pushConstantRange = vk::PushConstantRange()
@@ -1050,7 +1015,7 @@ namespace vm {
 	void Renderer::summit(bool useDynamicCmdBuffer)
 	{
 
-		presentQueue.waitIdle();
+		//presentQueue.waitIdle();
 		//recordSimultaneousUseCommandBuffers();
 		// 1. Acquiring an image from the swapchain
 		//(this image is attached in the framebuffer)
@@ -1114,7 +1079,7 @@ namespace vm {
 		createUniformBuffers();
 
 		createDescriptorPool();
-		createDescriptorSet();
+		createDescriptorSets();
 
 		createSemaphores();
 
