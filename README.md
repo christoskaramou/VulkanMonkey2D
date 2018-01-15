@@ -1,6 +1,6 @@
 # VulkanMonkey
 
-A small demo about this project engine: [DEMO](https://www.dropbox.com/s/vfkxy1qfr16ljkw/demo.7z?dl=0) 
+A small [demo](https://www.dropbox.com/s/vfkxy1qfr16ljkw/demo.7z?dl=0) about this game engine.
 
 Controls: move -> WASD, bar rotate -> Space, Pause -> P, ambient light on/off -> PGUP/PGDN, player light radius -> Left/Right Arrow, FPS control-> +/- 
 
